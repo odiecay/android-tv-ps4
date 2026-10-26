@@ -444,6 +444,10 @@ chmod 755 /android/system/xbin/overlay_remounter
 cp "$assets/bootanimation.zip" /android/system/product/media/bootanimation.zip
 chmod 644 /android/system/product/media/bootanimation.zip
 rm -f /android/system/vendor/etc/init/hwc3-drm.rc /android/system/vendor/etc/vintf/manifest/hwc3-drm.xml
+# No A/B slots here: hide the boot-control HAL, as Lineage's own initrd does
+# without androidboot.slot_suffix. Otherwise vold waits for it forever, and
+# with it the storage manager and the whole of system_server.
+rm -f /android/system/vendor/etc/vintf/manifest/android.hardware.boot@1.2.xml
 cp "$assets/composer" /android/system/vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
 chmod 755 /android/system/vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
 cp "$assets/libatv-display-modes.so" /android/system/vendor/lib64/libatv-display-modes.so
@@ -587,7 +591,8 @@ echo "Android network attached to namespace owned by PID $child"
 stage 'Android init launched; diagnostics continue in android-stages.log'
 # These logs are created on this console, never included in the release package.
 # Android init owns the rotating collector in /data/misc/logd; it survives setup.
-for attempt in $(seq 1 120); do
+# Dev build: about 10 minutes, since Android 16's first boot compiles a lot.
+for attempt in $(seq 1 300); do
  if [ -f /run/androidtv-ps4/power-request ]; then exit 0; fi
  now=$(cut -d' ' -f1 /proc/uptime)
  props=$(timeout 3 nsenter -t "$child" -m -p -n /system/bin/getprop 2>/dev/null || true)
