@@ -507,7 +507,11 @@ while read -r pattern _; do
   break ;;
  esac
 done < /android/fstab.lineage_x86_64_tv
-stage "USB storage for Android: $(grep -c voldmanaged /android/fstab.lineage_x86_64_tv) USB hubs; PS4 drive port ${internal_port:-not on USB} left out"
+# Dev build: USB sticks stay with Linux, which mirrors the logs and unmounts
+# after every copy. When Android also mounted the stick it was never
+# unmounted, so pulling it damaged the FAT filesystem.
+sed -i '/voldmanaged/d' /android/fstab.lineage_x86_64_tv
+stage 'USB sticks kept for logs (not offered to Android in this dev build)'
 cp "$assets/android-child.sh" /run/androidtv-ps4/android-child.sh
 cp "$assets/binder-devices" /run/androidtv-ps4/binder-devices
 cp "$assets/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
