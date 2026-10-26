@@ -78,7 +78,13 @@ installation=
 # /run/androidtv-ps4 while Linux runs and copied from there.
 copy_logs() {
  mkdir -p "$1" || return 1
- cp /run/androidtv-ps4/*.log /run/androidtv-ps4/*.txt "$1/" 2>/dev/null || true
+ # USB_LIGHT=1 (most USB cycles) leaves out the two big full logs, so the
+ # stick is only mounted for about a second and is safe to pull.
+ for f in /run/androidtv-ps4/*.log /run/androidtv-ps4/*.txt; do
+  [ -e "$f" ] || continue
+  case "${USB_LIGHT:-0}:${f##*/}" in 1:logcat-full.log|1:logcat-start.log) continue ;; esac
+  cp "$f" "$1/" 2>/dev/null || true
+ done
  [ ! -d /run/androidtv-ps4/crash ] || cp -r /run/androidtv-ps4/crash "$1/" 2>/dev/null || true
  cp /run/androidtv-ps4/display-ready "$1/display-ready.log" 2>/dev/null || true
  dmesg > "$1/kernel.log" 2>/dev/null || true
@@ -338,7 +344,9 @@ keep_logs() {
   fi
   hardware_report
   copy_logs "$installation/logs"
-  usb_mirror || true
+  # Big full logs to the stick every 6th cycle (30 s); the rest every cycle.
+  usb_cycle=$(( ${usb_cycle:-0} + 1 ))
+  if [ $((usb_cycle % 6)) -eq 0 ]; then usb_mirror || true; else USB_LIGHT=1 usb_mirror || true; fi
  done
  # Android stopped or a restart was asked for: one last copy, with the kernel
  # log that says why, to the logs folder and to a USB stick if one is in.
@@ -409,6 +417,14 @@ if [ -n "$quota_features" ] && ! /usr/sbin/tune2fs -l "$installation/data.img" 2
 fi
 stage 'Mounting Android app storage'
 mount -t ext4 -o loop,noatime "$installation/data.img" /mnt/android-persistent
+# Dev build: a hard power-off mid-boot can leave Android's runtime permission
+# store truncated, and Android 16 then stops system_server on every start
+# ("Missing <runtime-permissions>"). Move a damaged one aside; Android rebuilds it.
+perm=/mnt/android-persistent/data/misc_de/0/apexdata/com.android.permission/runtime-permissions.xml
+if [ -f "$perm" ] && ! grep -aq 'runtime-permissions' "$perm"; then
+ mv "$perm" "$perm.broken-$(date +%s)"
+ stage 'Android permission store was damaged; moved aside so Android rebuilds it'
+fi
 stage 'System and userdata mounted; preparing graphics and media'
 # Android 16 dev: Lineage ships its own ARM translation (ndk_translation).
 cp "$assets/system-build.prop" /android/system/build.prop
