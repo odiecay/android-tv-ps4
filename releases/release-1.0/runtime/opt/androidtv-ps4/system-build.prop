@@ -202,3 +202,5 @@ ro.build.backported_fixes.alias_bitset.long_list=18
 persist.sys.usb.config=adb
 persist.adb.tcp.port=5555
 service.adb.tcp.port=5555
+# Dev build: log, don't enforce, missing privileged permissions (GApps gaps).
+ro.control_privapp_permissions=log

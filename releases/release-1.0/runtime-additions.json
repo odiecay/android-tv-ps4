@@ -80,6 +80,11 @@
       "sha256": "4340183c51335c875dbf1ebab6f25ba84747090347a25b2a5bec4cac1c7057ff",
       "source": "android16/remounter/overlay_remounter.c (NDK r26d, static)",
       "mode": "0755"
+    },
+    "opt/androidtv-ps4/privapp-permissions-ps4-gapps.xml": {
+      "sha256": "569f2b8695f5a70433f3545def7ee2b897346e938b109f2f0b53a3e0050dd4d0",
+      "source": "Android TV for PS4 16 dev",
+      "mode": "0644"
     }
   }
 }

@@ -448,6 +448,8 @@ rm -f /android/system/vendor/etc/init/hwc3-drm.rc /android/system/vendor/etc/vin
 # without androidboot.slot_suffix. Otherwise vold waits for it forever, and
 # with it the storage manager and the whole of system_server.
 rm -f /android/system/vendor/etc/vintf/manifest/android.hardware.boot@1.2.xml
+cp "$assets/privapp-permissions-ps4-gapps.xml" /android/system/product/etc/permissions/privapp-permissions-ps4-gapps.xml
+chmod 644 /android/system/product/etc/permissions/privapp-permissions-ps4-gapps.xml
 cp "$assets/composer" /android/system/vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
 chmod 755 /android/system/vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
 cp "$assets/libatv-display-modes.so" /android/system/vendor/lib64/libatv-display-modes.so
