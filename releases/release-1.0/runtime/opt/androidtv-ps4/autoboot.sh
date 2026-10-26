@@ -79,6 +79,7 @@ installation=
 copy_logs() {
  mkdir -p "$1" || return 1
  cp /run/androidtv-ps4/*.log /run/androidtv-ps4/*.txt "$1/" 2>/dev/null || true
+ [ ! -d /run/androidtv-ps4/crash ] || cp -r /run/androidtv-ps4/crash "$1/" 2>/dev/null || true
  cp /run/androidtv-ps4/display-ready "$1/display-ready.log" 2>/dev/null || true
  dmesg > "$1/kernel.log" 2>/dev/null || true
  if [ -n "$installation" ] && [ "$1" != "$installation/logs" ]; then
@@ -326,6 +327,14 @@ keep_logs() {
    # And the first 6 MB, so the first failure survives any restarts after it.
    head -c 6000000 "/proc/$child/root/data/log.txt" > /run/androidtv-ps4/logcat-start.tmp 2>/dev/null &&
     mv /run/androidtv-ps4/logcat-start.tmp /run/androidtv-ps4/logcat-start.log
+   # Every record Android keeps of a system process death: native crash
+   # tombstones, watchdog/ANR thread dumps and the dropbox crash archive.
+   for kind in tombstones anr system/dropbox; do
+    src="/proc/$child/root/data/$kind"
+    [ -d "$src" ] || continue
+    mkdir -p "/run/androidtv-ps4/crash/${kind#system/}"
+    cp -p "$src"/* "/run/androidtv-ps4/crash/${kind#system/}/" 2>/dev/null || true
+   done
   fi
   hardware_report
   copy_logs "$installation/logs"
