@@ -1,7 +1,7 @@
 on early-init
     setprop ro.vndk.version 33
     setprop sys.use_memfd true
-    export AMD_DEBUG notiling
+    export AMD_DEBUG notiling,useaco
 
 # Verbose milestones until Android takes ownership of display output.
 on early-init
