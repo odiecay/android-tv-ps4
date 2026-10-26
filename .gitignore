@@ -65,3 +65,5 @@ __pycache__/
 !/releases/release-1.0/screensaver-overlay/res/
 !/releases/release-1.0/screensaver-overlay/res/**
 !/releases/release-1.0/kernel/baikal/*
+!/releases/release-1.0/kernel/android-usb-class/
+!/releases/release-1.0/kernel/android-usb-class/*
