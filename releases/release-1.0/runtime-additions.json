@@ -49,7 +49,7 @@
       "source": "kernel/baikal/psx_mts_net.c (linux-psx Baikal Ethernet), built against the Baikal kernel"
     },
     "lib/modules/6.15.4-androidtv-ps4-aeolia/extra/wlan_mt76x8_sdio.ko": {
-      "sha256": "72f8cc01ced56adc8037e78045419e1b225d7a3ef1a924ef7288dedcd56e3640",
+      "sha256": "ddfa380957f991796ed882d3bef59607ee62a2f03de9b252d8fab008865fd7ac",
       "source": "MT7668 Wi-Fi driver from the ps4-linux tree (drivers/net/wireless/mediatek/mt76x8), built as a module for 6.15.4-androidtv-ps4-aeolia with kernel/mt7668-proc-copy-bound.patch and kernel/mt7668-netns-ok.patch, debug symbols stripped",
       "location": "drive"
     },
@@ -84,6 +84,16 @@
     "opt/androidtv-ps4/privapp-permissions-ps4-gapps.xml": {
       "sha256": "569f2b8695f5a70433f3545def7ee2b897346e938b109f2f0b53a3e0050dd4d0",
       "source": "Android TV for PS4 16 dev",
+      "mode": "0644"
+    },
+    "opt/androidtv-ps4/xt_quota2.ko": {
+      "sha256": "d580a4d73287ebefbfaa660ac9b397f99fc3869598f88f609ef578c8473bd723",
+      "source": "quota2/xt_quota2.c rebuilt against the Android 16 dev kernel",
+      "mode": "0644"
+    },
+    "lib/modules/6.15.4-androidtv-ps4-aeolia/extra/xt_quota2.ko": {
+      "sha256": "d580a4d73287ebefbfaa660ac9b397f99fc3869598f88f609ef578c8473bd723",
+      "source": "quota2/xt_quota2.c rebuilt against the Android 16 dev kernel",
       "mode": "0644"
     }
   }
