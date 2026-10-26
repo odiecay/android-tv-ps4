@@ -370,7 +370,13 @@ cp "$assets/androidtv-ps4.rc" /android/system/etc/init/androidtv-ps4.rc
 # default (LLVM) emits a copy for every value carried around a loop on this
 # GPU, so loop-heavy shaders ran at half speed. gpu-llvm in the install folder
 # switches back if ACO draws something wrong.
-if [ -f "$installation/gpu-llvm" ]; then
+# gpu-debug in the install folder replaces the whole setting (letters, digits
+# and commas only), for GPU tests without reinstalling.
+if [ -f "$installation/gpu-debug" ]; then
+ gpu_debug=$(head -c 200 "$installation/gpu-debug" | tr -cd 'a-z0-9,')
+ sed -i "s/AMD_DEBUG notiling,useaco/AMD_DEBUG ${gpu_debug:-none}/" /android/system/etc/init/androidtv-ps4.rc
+ stage "GPU settings: ${gpu_debug:-none} (gpu-debug found)"
+elif [ -f "$installation/gpu-llvm" ]; then
  sed -i 's/AMD_DEBUG notiling,useaco/AMD_DEBUG notiling/' /android/system/etc/init/androidtv-ps4.rc
  stage 'Shader compiler: LLVM (gpu-llvm found)'
 else
