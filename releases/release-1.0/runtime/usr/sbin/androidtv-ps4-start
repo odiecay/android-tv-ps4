@@ -279,19 +279,19 @@ keep_logs() {
     timeout 5 nsenter -t "$child" -n /usr/sbin/iw dev
     timeout 5 nsenter -t "$child" -n /usr/sbin/ip addr show wlan0
     echo; echo "Recent Android Wi-Fi and network messages:"
-    timeout 10 nsenter -t "$child" -m -p -n chroot /android /system/bin/logcat -d -b main,system -t 2000 2>/dev/null | grep -iE 'wifi|wpa|supplicant|dhcp|connectivity|netd|wlan' | tail -200
+    timeout 10 nsenter -t "$child" -m -p -n /system/bin/logcat -d -b main,system -t 2000 2>/dev/null | grep -iE 'wifi|wpa|supplicant|dhcp|connectivity|netd|wlan' | tail -200
    } > /run/androidtv-ps4/running.log.part 2>&1
    mv /run/androidtv-ps4/running.log.part /run/androidtv-ps4/running.log
    # Google Play services and Play Store warnings and errors only, for sign-in
    # problems. No other app's messages. Email addresses and anything that looks
    # like a token or key are removed before the file is written.
-   timeout 10 nsenter -t "$child" -m -p -n chroot /android /system/bin/logcat -d -b main,system -t 3000 '*:W' 2>/dev/null |
+   timeout 10 nsenter -t "$child" -m -p -n /system/bin/logcat -d -b main,system -t 3000 '*:W' 2>/dev/null |
     grep -iE 'gms|gsf|vending|finsky|checkin|googleauth|gls|auth' |
     sed -E -e 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<removed>/g' -e 's/[A-Za-z0-9_+\/=-]{24,}/<removed>/g' |
     tail -300 > /run/androidtv-ps4/google-services.tmp
    mv /run/androidtv-ps4/google-services.tmp /run/androidtv-ps4/google-services.log
    # Internal dev build only: the whole recent Android log, for bring-up.
-   timeout 10 nsenter -t "$child" -m -p -n chroot /android /system/bin/logcat -d -b main,system,crash,events -t 3000 > /run/androidtv-ps4/logcat.tmp 2>&1
+   timeout 10 nsenter -t "$child" -m -p -n /system/bin/logcat -d -b main,system,crash,events -t 3000 > /run/androidtv-ps4/logcat.tmp 2>&1
    mv /run/androidtv-ps4/logcat.tmp /run/androidtv-ps4/logcat.log
   fi
   hardware_report
@@ -562,11 +562,11 @@ stage 'Android init launched; diagnostics continue in android-stages.log'
 for attempt in $(seq 1 120); do
  if [ -f /run/androidtv-ps4/power-request ]; then exit 0; fi
  now=$(cut -d' ' -f1 /proc/uptime)
- props=$(timeout 3 nsenter -t "$child" -m -p -n chroot /android /system/bin/getprop 2>/dev/null || true)
+ props=$(timeout 3 nsenter -t "$child" -m -p -n /system/bin/getprop 2>/dev/null || true)
  property() { printf '%s\n' "$props" | sed -n "s/^\[$1\]: \[\(.*\)\]$/\1/p"; }
  if [ "$(property init.svc.bootanim)" = running ] && [ ! -f /run/androidtv-ps4/animation-captured ]; then
   touch /run/androidtv-ps4/animation-captured
-  ( timeout 5 nsenter -t "$child" -m -p -n chroot /android /system/bin/dumpsys SurfaceFlinger > /run/androidtv-ps4/animation-display.log 2>&1 || true ) &
+  ( timeout 5 nsenter -t "$child" -m -p -n /system/bin/dumpsys SurfaceFlinger > /run/androidtv-ps4/animation-display.log 2>&1 || true ) &
  fi
  if [ ! -f /run/androidtv-ps4/display-ready ]; then
   stage "Android startup: graphics=$(property init.svc.surfaceflinger) animation=$(property init.svc.bootanim) apps=$(property init.svc.zygote); waiting for a display frame"

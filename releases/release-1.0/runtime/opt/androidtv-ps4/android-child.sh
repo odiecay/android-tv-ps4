@@ -60,4 +60,12 @@ unset HOME
 # stage, so mount it here; without it init aborts with EINVAL and reboots.
 mkdir -p /android/second_stage_resources
 mount -t tmpfs -o mode=0755 tmpfs /android/second_stage_resources
-exec chroot /android /system/bin/init selinux_setup
+# Make Android's root the real root of its mount namespace, as first-stage init
+# does with switch_root. Android 16's init switches back into this namespace
+# (setns) and then uses absolute paths such as /bootstrap-apex; under a plain
+# chroot that lands in the Linux initramfs instead of Android's root.
+# A mount under a shared parent cannot be moved; this is Android's own namespace.
+mount --make-rprivate /
+cd /android
+mount --move /android /
+exec chroot . /system/bin/init selinux_setup
