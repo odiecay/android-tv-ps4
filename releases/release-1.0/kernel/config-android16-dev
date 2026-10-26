@@ -1090,6 +1090,8 @@ CONFIG_PT_RECLAIM=y
 #
 # CONFIG_DAMON is not set
 # end of Data Access Monitoring
+
+CONFIG_MEMFD_ASHMEM_SHIM=y
 # end of Memory Management options
 
 CONFIG_NET=y
