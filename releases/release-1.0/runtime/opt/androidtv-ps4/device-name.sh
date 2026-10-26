@@ -43,4 +43,16 @@ if [ "$(getprop persist.vendor.androidtv.named)" != 1 ]; then
         setprop persist.vendor.androidtv.named 1 || note "could not record that the name was set"
     fi
 fi
+# Google voice typing ships as a keyboard and grabs every text field, opening
+# its own setup screen. Make Gboard the keyboard once; a keyboard chosen
+# later in Settings is kept.
+gboard=com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME
+voice=com.google.android.tts/com.google.android.apps.speech.tts.googletts.settings.asr.voiceime.VoiceInputMethodService
+if [ "$(getprop persist.vendor.androidtv.keyboard)" != 1 ] && ime list -s -a | grep -qx "$gboard"; then
+    ime enable "$gboard" >/dev/null 2>&1
+    ime list -s -a | grep -qx "$voice" && ime disable "$voice" >/dev/null 2>&1
+    if ensure secure default_input_method "$gboard"; then
+        setprop persist.vendor.androidtv.keyboard 1 || note "could not record that the keyboard was set"
+    fi
+fi
 note "done"

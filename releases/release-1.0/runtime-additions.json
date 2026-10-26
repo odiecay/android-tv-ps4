@@ -95,6 +95,11 @@
       "sha256": "d580a4d73287ebefbfaa660ac9b397f99fc3869598f88f609ef578c8473bd723",
       "source": "quota2/xt_quota2.c rebuilt against the Android 16 dev kernel",
       "mode": "0644"
+    },
+    "opt/androidtv-ps4/android_usb_class.ko": {
+      "sha256": "8e1ab2b703cf91cc00b9d7eedd002279b54c074552e996bead36223436a07ee0",
+      "source": "android-usb-class/android_usb_class.c built against the Android 16 dev kernel",
+      "mode": "0644"
     }
   }
 }

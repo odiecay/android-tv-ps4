@@ -531,6 +531,7 @@ stage 'USB sticks kept for logs (not offered to Android in this dev build)'
 cp "$assets/android-child.sh" /run/androidtv-ps4/android-child.sh
 cp "$assets/binder-devices" /run/androidtv-ps4/binder-devices
 cp "$assets/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
+cp "$assets/android_usb_class.ko" /run/androidtv-ps4/android_usb_class.ko
 # Android 16 dev: Lineage's own Mesa 26 runs unmodified. It identifies the
 # PS4 GPU as Kaveri, like 13's; the Liverpool raster-config patch 13 applies
 # to its Mesa isn't ported yet, so some depth/stencil drawing may glitch.
@@ -542,6 +543,11 @@ set -eu
 chmod 755 /run/androidtv-ps4/android-child.sh /run/androidtv-ps4/binder-devices
 if ! grep -q '^xt_quota2 ' /proc/modules; then
     insmod /run/androidtv-ps4/xt_quota2.ko
+fi
+# Android's USB service needs /sys/class/android_usb before it starts, or
+# Developer options fails. The class stays empty: the PS4 has no USB gadget.
+if [ ! -d /sys/class/android_usb ]; then
+    insmod /run/androidtv-ps4/android_usb_class.ko || stage 'android_usb class unavailable; Developer options may not open'
 fi
 # Per-install identifier; no developer identity or fabricated hardware serial.
 if [ ! -s "$installation/device-id" ]; then
