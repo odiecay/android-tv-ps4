@@ -264,7 +264,12 @@ save_logs() {
 keep_logs() {
  set +e
  while [ ! -f /run/androidtv-ps4/power-request ]; do
-  if [ -f /run/androidtv-ps4/android.pid ]; then sleep 60; else sleep 10; fi
+  # Wake every second so a stop request is answered at once.
+  if [ -f /run/androidtv-ps4/android.pid ]; then wait_for=60; else wait_for=10; fi
+  while [ "$wait_for" -gt 0 ] && [ ! -f /run/androidtv-ps4/power-request ]; do
+   sleep 1; wait_for=$((wait_for - 1))
+  done
+  [ ! -f /run/androidtv-ps4/power-request ] || break
   grep -q ' /mnt/ps4-user ' /proc/mounts || break
   child=$(cat /run/androidtv-ps4/android-init.pid 2>/dev/null)
   if [ -n "$child" ]; then
@@ -289,6 +294,16 @@ keep_logs() {
   hardware_report
   copy_logs "$installation/logs"
  done
+ # Android stopped or a restart was asked for: one last copy, with the kernel
+ # log that says why, to the logs folder and to a USB stick if one is in.
+ if [ -f /run/androidtv-ps4/power-request ]; then
+  stage "Android stopped ($(cat /run/androidtv-ps4/power-request)); saving final logs"
+  hardware_report
+  copy_logs "$installation/logs"
+  export_reports || true
+  sync
+ fi
+ rm -f /run/androidtv-ps4/bootstrap-active
 }
 keep_logs </dev/null >/dev/null 2>&1 &
 echo $! > /run/androidtv-ps4/keep-logs.pid
@@ -474,6 +489,7 @@ mount --bind /proc/self/ns/net /run/androidtv-ps4/host-netns
 # From here a failure leaves Android running; no clean-up stops it.
 hardware_report
 touch /run/androidtv-ps4/android-launched
+touch /run/androidtv-ps4/bootstrap-active
 /usr/sbin/android-supervisor -- /bin/sh /run/androidtv-ps4/android-child.sh </dev/null >/run/androidtv-ps4/android.log 2>&1 &
 echo $! > /run/androidtv-ps4/android-supervisor.pid
 for attempt in $(seq 1 50); do

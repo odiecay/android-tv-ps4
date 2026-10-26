@@ -76,7 +76,8 @@ static int perform_power(const char *action){
  if(write_state(STATE "/power-request",request)){perror("power request");return 1;}
  fprintf(stderr,"[Android TV] Android has stopped; preparing console %s\n",action);
  /* The bootstrap monitor notices power-request and finishes its local logs. */
- for(int i=0;i<50&&access(STATE "/bootstrap-active",F_OK)==0;i++)usleep(100000);
+ /* Up to 15 s for the final log copy (drive and USB stick). */
+ for(int i=0;i<150&&access(STATE "/bootstrap-active",F_OK)==0;i++)usleep(100000);
  sync();
  /* These binds were created in the host before Android's mount namespace.
   * They survive Android init exiting and must be released before both the
