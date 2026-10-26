@@ -70,9 +70,11 @@ usb_startup_logs() {
                 } > "$out/status.txt" 2>&1
                 dmesg > "$out/kernel.log" 2>&1
                 cp /run/androidtv-ps4/*.log /run/androidtv-ps4/*.txt "$out/" 2>/dev/null
-                sync
             fi
+            # umount flushes this stick only. A global sync here could wait on
+            # the PS4 drive while it is being unlocked and stall every later copy.
             umount /mnt/usb-logs 2>/dev/null
+            echo "<6>[Android TV] USB log copy $round done" > /dev/kmsg 2>/dev/null
         done
         # Dev build: every second for the first 30 s, so an early hang still
         # leaves its last lines on the stick.

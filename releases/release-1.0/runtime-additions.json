@@ -75,6 +75,11 @@
       "sha256": "fd5930ff825e8171fcca18ec2fa1564f89e1add43e66a59d0351553e4f0fedae",
       "source": "Android TV for PS4 13 base system (BRTDTV) /system/lib64",
       "mode": "0644"
+    },
+    "opt/androidtv-ps4/overlay_remounter": {
+      "sha256": "4340183c51335c875dbf1ebab6f25ba84747090347a25b2a5bec4cac1c7057ff",
+      "source": "android16/remounter/overlay_remounter.c (NDK r26d, static)",
+      "mode": "0755"
     }
   }
 }

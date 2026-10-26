@@ -265,7 +265,7 @@ keep_logs() {
  set +e
  while [ ! -f /run/androidtv-ps4/power-request ]; do
   # Wake every second so a stop request is answered at once.
-  if [ -f /run/androidtv-ps4/android.pid ]; then wait_for=60; else wait_for=10; fi
+  if [ -f /run/androidtv-ps4/android.pid ]; then wait_for=60; else wait_for=5; fi
   while [ "$wait_for" -gt 0 ] && [ ! -f /run/androidtv-ps4/power-request ]; do
    sleep 1; wait_for=$((wait_for - 1))
   done
@@ -290,6 +290,9 @@ keep_logs() {
     sed -E -e 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<removed>/g' -e 's/[A-Za-z0-9_+\/=-]{24,}/<removed>/g' |
     tail -300 > /run/androidtv-ps4/google-services.tmp
    mv /run/androidtv-ps4/google-services.tmp /run/androidtv-ps4/google-services.log
+   # Internal dev build only: the whole recent Android log, for bring-up.
+   timeout 10 nsenter -t "$child" -m -p -n chroot /android /system/bin/logcat -d -b main,system,crash,events -t 3000 > /run/androidtv-ps4/logcat.tmp 2>&1
+   mv /run/androidtv-ps4/logcat.tmp /run/androidtv-ps4/logcat.log
   fi
   hardware_report
   copy_logs "$installation/logs"
@@ -405,6 +408,11 @@ chmod 644 /android/system/etc/init/androidtv-logging.rc
 # Android 16 dev: Lineage's own apps, gralloc and Bluetooth. Only the display
 # composer comes from 13, because Lineage's hwc3 needs atomic modesetting and
 # the PS4 GPU only has the legacy display path.
+# Android 16 runs /system/xbin/overlay_remounter when its root is an overlay
+# (always, here). The real one remounts every overlay read-only, which fails
+# on Android's own root; this one goes straight to second-stage init.
+cp "$assets/overlay_remounter" /android/system/xbin/overlay_remounter
+chmod 755 /android/system/xbin/overlay_remounter
 cp "$assets/bootanimation.zip" /android/system/product/media/bootanimation.zip
 chmod 644 /android/system/product/media/bootanimation.zip
 rm -f /android/system/vendor/etc/init/hwc3-drm.rc /android/system/vendor/etc/vintf/manifest/hwc3-drm.xml
