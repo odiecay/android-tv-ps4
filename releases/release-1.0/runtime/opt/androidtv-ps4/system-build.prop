@@ -2,15 +2,15 @@
 # from generate-common-build-props
 # These properties identify this partition image.
 ####################################
-ro.product.system.brand=Android-x86
-ro.product.system.device=x86_64_tablet
-ro.product.system.name=lineage_x86_64_tv
+ro.product.system.brand=google
+ro.product.system.device=kirkwood
+ro.product.system.name=kirkwood
 ro.system.product.cpu.abilist=x86_64,x86,arm64-v8a
 ro.system.product.cpu.abilist32=x86
 ro.system.product.cpu.abilist64=x86_64,arm64-v8a
 ro.system.build.date=Sun Oct 25 21:27:49 MSK 2026
 ro.system.build.date.utc=1792952869
-ro.system.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.system.build.fingerprint=google/kirkwood/kirkwood:14/UTTK.260317.003/15205007:user/release-keys
 ro.system.build.id=BP4A.251205.006
 ro.system.build.tags=test-keys
 ro.system.build.type=userdebug
@@ -23,7 +23,7 @@ ro.system.build.version.sdk_full=36.1
 # from gen_build_prop.py:generate_build_info
 ####################################
 # begin build properties
-ro.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.build.fingerprint=google/kirkwood/kirkwood:14/UTTK.260317.003/15205007:user/release-keys
 ro.build.id=BP4A.251205.006
 ro.build.display.id=Android TV for PS4 16 - internal dev
 ro.build.version.incremental=1792952869
@@ -45,7 +45,7 @@ ro.build.date.utc=1792952869
 ro.build.type=userdebug
 ro.build.user=valertos08
 ro.build.host=valertos08-Default-string
-ro.build.tags=test-keys
+ro.build.tags=release-keys
 ro.build.flavor=lineage_x86_64_tv-userdebug
 ro.lineage.device=x86_64_tablet
 # ro.product.cpu.abi and ro.product.cpu.abi2 are obsolete,
@@ -204,3 +204,6 @@ persist.adb.tcp.port=5555
 service.adb.tcp.port=5555
 # Dev build: log, don't enforce, missing privileged permissions (GApps gaps).
 ro.control_privapp_permissions=log
+
+# PS4: the name people see
+bluetooth.device.default_name=PlayStation 4

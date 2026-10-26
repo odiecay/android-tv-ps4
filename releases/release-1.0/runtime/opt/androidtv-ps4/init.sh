@@ -733,7 +733,10 @@ function init_hal_media()
 	set_property system.ffmpeg.codec2.prefer 1
 	set_property vendor.ffmpeg.codec2.prefer 1
 	set_property debug.stagefright.ccodec 4
-	set_property persist.ffmpeg-codec2.pixel_format RGBX_8888
+	# PS4: the decoder hands YV12 frames to the GPU, which converts them; with
+	# RGBX the CPU converted every frame and 1080p60 VP9 dropped twice as many.
+	# Needs the patched minigbm (512-byte YUV rows, full-size CPU map).
+	set_property persist.ffmpeg-codec2.pixel_format YV12
 
 
 ## User choices made on the "Graphics & decoding" settings screen are applied
