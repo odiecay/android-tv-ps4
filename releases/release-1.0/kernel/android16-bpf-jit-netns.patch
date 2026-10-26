@@ -1,0 +1,113 @@
+--- a/net/core/sysctl_net_core.c
++++ b/net/core/sysctl_net_core.c
+@@ -20,6 +20,7 @@
+ 
+ #include <net/ip.h>
+ #include <net/sock.h>
++#include <net/netns/generic.h>
+ #include <net/net_ratelimit.h>
+ #include <net/busy_poll.h>
+ #include <net/pkt_sched.h>
+@@ -788,9 +789,102 @@
+ 	.exit = sysctl_core_net_exit,
+ };
+ 
++#ifdef CONFIG_BPF_JIT
++/*
++ * PS4 (Android TV for PS4): Android runs in its own network namespace, and
++ * Android 16's netbpfload writes net.core.bpf_jit_enable and fails the boot
++ * when the file is missing. Show the BPF JIT knobs in every namespace. They
++ * stay global, with the same handlers: writes still need CAP_SYS_ADMIN in the
++ * initial user namespace. Registered into the namespace's own set directly,
++ * because register_net_sysctl_sz() makes global data read-only there.
++ */
++static unsigned int bpf_jit_netns_id __read_mostly;
++
++struct bpf_jit_netns {
++	struct ctl_table_header *hdr;
++};
++
++static struct ctl_table bpf_jit_netns_table[] = {
++	{
++		.procname	= "bpf_jit_enable",
++		.data		= &bpf_jit_enable,
++		.maxlen		= sizeof(int),
++		.mode		= 0644,
++		.proc_handler	= proc_dointvec_minmax_bpf_enable,
++# ifdef CONFIG_BPF_JIT_ALWAYS_ON
++		.extra1		= SYSCTL_ONE,
++		.extra2		= SYSCTL_ONE,
++# else
++		.extra1		= SYSCTL_ZERO,
++		.extra2		= SYSCTL_TWO,
++# endif
++	},
++# ifdef CONFIG_HAVE_EBPF_JIT
++	{
++		.procname	= "bpf_jit_harden",
++		.data		= &bpf_jit_harden,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax_bpf_restricted,
++		.extra1		= SYSCTL_ZERO,
++		.extra2		= SYSCTL_TWO,
++	},
++	{
++		.procname	= "bpf_jit_kallsyms",
++		.data		= &bpf_jit_kallsyms,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax_bpf_restricted,
++		.extra1		= SYSCTL_ZERO,
++		.extra2		= SYSCTL_ONE,
++	},
++# endif
++	{
++		.procname	= "bpf_jit_limit",
++		.data		= &bpf_jit_limit,
++		.maxlen		= sizeof(long),
++		.mode		= 0600,
++		.proc_handler	= proc_dolongvec_minmax_bpf_restricted,
++		.extra1		= SYSCTL_LONG_ONE,
++		.extra2		= &bpf_jit_limit_max,
++	},
++};
++
++static __net_init int bpf_jit_netns_init(struct net *net)
++{
++	struct bpf_jit_netns *bn = net_generic(net, bpf_jit_netns_id);
++
++	if (net_eq(net, &init_net))
++		return 0;
++	bn->hdr = __register_sysctl_table(&net->sysctls, "net/core",
++					  bpf_jit_netns_table,
++					  ARRAY_SIZE(bpf_jit_netns_table));
++	return bn->hdr ? 0 : -ENOMEM;
++}
++
++static __net_exit void bpf_jit_netns_exit(struct net *net)
++{
++	struct bpf_jit_netns *bn = net_generic(net, bpf_jit_netns_id);
++
++	if (bn->hdr)
++		unregister_sysctl_table(bn->hdr);
++}
++
++static struct pernet_operations bpf_jit_netns_ops = {
++	.init = bpf_jit_netns_init,
++	.exit = bpf_jit_netns_exit,
++	.id   = &bpf_jit_netns_id,
++	.size = sizeof(struct bpf_jit_netns),
++};
++#endif
++
+ static __init int sysctl_core_init(void)
+ {
+ 	register_net_sysctl(&init_net, "net/core", net_core_table);
++#ifdef CONFIG_BPF_JIT
++	if (register_pernet_subsys(&bpf_jit_netns_ops))
++		pr_warn("PS4: BPF JIT sysctls unavailable in network namespaces\n");
++#endif
+ 	return register_pernet_subsys(&sysctl_core_ops);
+ }
+ 
