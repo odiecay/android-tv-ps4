@@ -423,7 +423,12 @@ cp "$assets/libhidltransport.so" /android/system/vendor/lib64/libhidltransport.s
 cp "$assets/hwcomposer.rc" /android/system/vendor/etc/init/android.hardware.graphics.composer@2.1-drmfb-service.rc
 cp "$assets/composer-drmfb.xml" /android/system/vendor/etc/vintf/manifest/atv-composer-drmfb.xml
 chmod 644 /android/system/vendor/lib64/libatv-display-modes.so /android/system/vendor/lib64/libhidltransport.so /android/system/vendor/etc/init/android.hardware.graphics.composer@2.1-drmfb-service.rc /android/system/vendor/etc/vintf/manifest/atv-composer-drmfb.xml
-printf '%s\n' 'none /cache tmpfs noatime,nosuid,nodev,mode=0770,uid=1000,gid=2001 defaults' > /android/fstab.mustang
+# Lineage's own tables offer USB disks (fstab.lineage_x86_64_tv) or every disk
+# (fstab.internal.x86, used with INTERNAL_MOUNT) to Android. A fat PS4's drive
+# sits on a USB path, so neither may ever be used: ours replaces the first and
+# the second is removed.
+rm -f /android/system/vendor/etc/fstab.internal.x86
+printf '%s\n' 'none /cache tmpfs noatime,nosuid,nodev,mode=0770,uid=1000,gid=2001 defaults' > /android/fstab.lineage_x86_64_tv
 # USB sticks show up in Android as USB storage. The PS4's own drive can sit
 # behind the USB controller too (it does on fat Aeolia consoles), and Android
 # must never offer to format it, so the port it's on is left out: every other
@@ -440,7 +445,7 @@ for root in /sys/bus/usb/devices/usb*; do
   "/usb$hub/"*) continue ;;
   *) rule="/devices/*/usb$hub/*" ;;
  esac
- printf '%s\t\tauto\tauto\tdefaults\tvoldmanaged=usb:auto,noemulatedsd\n' "$rule" >> /android/fstab.mustang
+ printf '%s\t\tauto\tauto\tdefaults\tvoldmanaged=usb:auto,noemulatedsd\n' "$rule" >> /android/fstab.lineage_x86_64_tv
 done
 # Check the rules against the PS4 drive's real path, the way vold matches
 # them. If any rule would match it, remove every USB rule.
@@ -448,12 +453,12 @@ internal_dev=${internal_sys#/sys}; internal_dev=${internal_dev%/*}
 while read -r pattern _; do
  case "$pattern" in /devices/*) ;; *) continue ;; esac
  case "$internal_dev" in $pattern)
-  sed -i '/voldmanaged/d' /android/fstab.mustang
+  sed -i '/voldmanaged/d' /android/fstab.lineage_x86_64_tv
   stage 'USB storage for Android turned off: a rule matched the PS4 drive'
   break ;;
  esac
-done < /android/fstab.mustang
-stage "USB storage for Android: $(grep -c voldmanaged /android/fstab.mustang) USB hubs; PS4 drive port ${internal_port:-not on USB} left out"
+done < /android/fstab.lineage_x86_64_tv
+stage "USB storage for Android: $(grep -c voldmanaged /android/fstab.lineage_x86_64_tv) USB hubs; PS4 drive port ${internal_port:-not on USB} left out"
 cp "$assets/android-child.sh" /run/androidtv-ps4/android-child.sh
 cp "$assets/binder-devices" /run/androidtv-ps4/binder-devices
 cp "$assets/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
@@ -475,7 +480,7 @@ if [ ! -s "$installation/device-id" ]; then
  sync
 fi
 serial=$(cat "$installation/device-id")
-printf '%s\n' "androidboot.hardware=mustang androidboot.selinux=permissive androidboot.fake_battery=1 androidboot.enable_console=0 androidboot.serialno=ps4${serial} HWC_HIDL=drmfb GRALLOC=gbm" > /run/androidtv-ps4/android-cmdline
+printf '%s\n' "androidboot.hardware=lineage_x86_64_tv INTERNAL_MOUNT=0 androidboot.selinux=permissive androidboot.fake_battery=1 androidboot.enable_console=0 androidboot.serialno=ps4${serial} HWC_HIDL=drmfb GRALLOC=gbm" > /run/androidtv-ps4/android-cmdline
 echo on > /proc/sys/kernel/printk_devkmsg
 echo 7 > /proc/sys/kernel/printk
 trap '' HUP
