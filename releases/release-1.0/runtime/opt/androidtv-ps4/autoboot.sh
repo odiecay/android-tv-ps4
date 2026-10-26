@@ -480,7 +480,7 @@ if [ ! -s "$installation/device-id" ]; then
  sync
 fi
 serial=$(cat "$installation/device-id")
-printf '%s\n' "androidboot.hardware=lineage_x86_64_tv INTERNAL_MOUNT=0 androidboot.selinux=permissive androidboot.fake_battery=1 androidboot.enable_console=0 androidboot.serialno=ps4${serial} HWC_HIDL=drmfb GRALLOC=gbm" > /run/androidtv-ps4/android-cmdline
+printf '%s\n' "androidboot.hardware=lineage_x86_64_tv INTERNAL_MOUNT=0 androidboot.selinux=permissive androidboot.fake_battery=1 androidboot.enable_console=0 androidboot.serialno=ps4${serial} HWC_HIDL=drmfb" > /run/androidtv-ps4/android-cmdline
 echo on > /proc/sys/kernel/printk_devkmsg
 echo 7 > /proc/sys/kernel/printk
 trap '' HUP

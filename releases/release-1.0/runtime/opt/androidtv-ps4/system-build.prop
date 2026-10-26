@@ -202,4 +202,3 @@ ro.build.backported_fixes.alias_bitset.long_list=18
 persist.sys.usb.config=adb
 persist.adb.tcp.port=5555
 service.adb.tcp.port=5555
-persist.sys.los.hardware.gralloc=gbm
