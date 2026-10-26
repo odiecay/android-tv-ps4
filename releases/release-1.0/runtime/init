@@ -74,7 +74,9 @@ usb_startup_logs() {
             fi
             umount /mnt/usb-logs 2>/dev/null
         done
-        sleep 5
+        # Dev build: every second for the first 30 s, so an early hang still
+        # leaves its last lines on the stick.
+        if [ "$round" -lt 30 ]; then sleep 1; else sleep 5; fi
     done
 }
 usb_startup_logs &

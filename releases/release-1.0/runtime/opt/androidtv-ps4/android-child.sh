@@ -55,4 +55,9 @@ export ANDROID_ROOT=/system ANDROID_DATA=/data
 echo 'Starting Android init in its own PID, mount, IPC, UTS and network namespaces'
 # Apps select their own home directory; do not inherit the Linux shell root.
 unset HOME
+# Android 16's init (selinux_setup) remounts /second_stage_resources, a tmpfs
+# that first-stage init normally creates. This runtime starts at the second
+# stage, so mount it here; without it init aborts with EINVAL and reboots.
+mkdir -p /android/second_stage_resources
+mount -t tmpfs -o mode=0755 tmpfs /android/second_stage_resources
 exec chroot /android /system/bin/init selinux_setup

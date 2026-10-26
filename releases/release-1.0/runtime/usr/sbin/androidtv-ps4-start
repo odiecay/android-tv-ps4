@@ -200,7 +200,9 @@ mkdir -p /mnt/ps4-user /mnt/android-share /mnt/android-sfs /mnt/android-lower /m
 # fats use plain sector numbers. Try this southbridge's layout first, then the
 # other: with the wrong one the mount just refuses, nothing is written.
 open_user() {
+ stage "Unlocking PS4 storage (cryptsetup, IV offset $1)"
  cryptsetup open --type plain --cipher aes-xts-plain64 --key-size 256 --offset 0 --skip "$1" --key-file /key/eap_hdd_key.bin "$userpart" ps4-android-user || return 1
+ stage "Unlocked; mounting the PS4 user filesystem"
  mount -t ufs -o ufstype=ufs2,noatime /dev/mapper/ps4-android-user /mnt/ps4-user 2>/dev/null && return 0
  cryptsetup close ps4-android-user || true
  return 1
