@@ -320,6 +320,12 @@ keep_logs() {
    # Internal dev build only: the whole recent Android log, for bring-up.
    timeout 10 nsenter -t "$child" -m -p -n /system/bin/logcat -d -b main,system,crash,events -t 3000 > /run/androidtv-ps4/logcat.tmp 2>&1
    mv /run/androidtv-ps4/logcat.tmp /run/androidtv-ps4/logcat.log
+   # The newest 4 MB of the full log Lineage writes from early boot.
+   tail -c 4000000 "/proc/$child/root/data/log.txt" > /run/androidtv-ps4/logcat-full.tmp 2>/dev/null &&
+    mv /run/androidtv-ps4/logcat-full.tmp /run/androidtv-ps4/logcat-full.log
+   # And the first 6 MB, so the first failure survives any restarts after it.
+   head -c 6000000 "/proc/$child/root/data/log.txt" > /run/androidtv-ps4/logcat-start.tmp 2>/dev/null &&
+    mv /run/androidtv-ps4/logcat-start.tmp /run/androidtv-ps4/logcat-start.log
   fi
   hardware_report
   copy_logs "$installation/logs"
