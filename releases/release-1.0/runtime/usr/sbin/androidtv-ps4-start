@@ -103,6 +103,33 @@ export_reports() {
  done
  return 1
 }
+# Dev build: mirror the logs folder to a USB stick on every cycle, so a hang
+# or black screen still leaves everything on the stick. One writer per stick:
+# if Android has mounted it (USB storage), write through Android's own mount;
+# otherwise mount it here just for the copy. Never the console's own drive.
+usb_mirror() {
+ init_pid=$(cat /run/androidtv-ps4/android-init.pid 2>/dev/null)
+ for block in /sys/class/block/sd*; do
+  name=${block##*/}
+  [ -b "/dev/${name%%[0-9]*}27" ] && continue
+  [ -r "$block/dev" ] || continue
+  devno=$(cat "$block/dev")
+  android_mount=
+  if [ -n "$init_pid" ] && [ -r "/proc/$init_pid/mountinfo" ]; then
+   android_mount=$(awk -v d="$devno" '$3 == d { print $5; exit }' "/proc/$init_pid/mountinfo")
+  fi
+  if [ -n "$android_mount" ]; then
+   copy_logs "/proc/$init_pid/root$android_mount/AndroidTV-PS4-logs" && return 0
+   continue
+  fi
+  mkdir -p /mnt/usb-report
+  mount -t vfat "/dev/$name" /mnt/usb-report 2>/dev/null || mount -t exfat "/dev/$name" /mnt/usb-report 2>/dev/null || continue
+  copy_logs /mnt/usb-report/AndroidTV-PS4-logs
+  umount /mnt/usb-report 2>/dev/null
+  return 0
+ done
+ return 1
+}
 stop_safely() {
  [ ! -f /run/androidtv-ps4/android-launched ] || return 0
  # Stop the background log copy before the drive is unmounted.
@@ -296,6 +323,7 @@ keep_logs() {
   fi
   hardware_report
   copy_logs "$installation/logs"
+  usb_mirror || true
  done
  # Android stopped or a restart was asked for: one last copy, with the kernel
  # log that says why, to the logs folder and to a USB stick if one is in.
