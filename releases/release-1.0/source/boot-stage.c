@@ -19,7 +19,7 @@
 #include "launch-progress.h"
 #include "launch-protocol.h"
 #ifndef ROOT
-#define ROOT "/user/app/ps4-android"
+#define ROOT "/user/app/ps4-android16"
 #endif
 extern int ps4_as_root(void (*fn)(void *),void *arg);
 static int logfd=-1,controlfd=-1,resultfd=-1,access_error;

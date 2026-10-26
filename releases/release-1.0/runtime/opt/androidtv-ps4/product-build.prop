@@ -1,53 +1,98 @@
-##################################################
-# from generate-common-build-props               #
-# These properties identify this partition image #
-##################################################
-ro.product.product.brand=google
-ro.product.product.device=mustang
-ro.product.product.board=mustang
-ro.product.product.manufacturer=Google
-ro.product.product.model=Pixel 10 Pro XL
-ro.product.product.name=mustang
-ro.product.build.date=Tue Mar 31 2026 23:19:49 GMT-0300
-ro.product.build.date.utc=1775009989
-ro.product.build.fingerprint=google/mustang/mustang:16/CP1A.260305.018/14887507:user/release-keys
-ro.product.build.id=TQ3A.230901.001
-ro.product.build.tags=release-keys
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.product.product.brand=Android-x86
+ro.product.product.device=x86_64_tablet
+ro.product.product.manufacturer=unknown
+ro.product.product.model=Generic Android-x86_64
+ro.product.product.name=lineage_x86_64_tv
+ro.product.build.date=Sun Oct 25 21:27:49 MSK 2026
+ro.product.build.date.utc=1792952869
+ro.product.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.product.build.id=BP4A.251205.006
+ro.product.build.tags=test-keys
 ro.product.build.type=userdebug
-ro.product.build.version.incremental=14887507
-ro.product.build.version.release=13
-ro.product.build.version.release_or_codename=13
-ro.product.build.version.sdk=33
-###############################################
-# from variable ADDITIONAL_PRODUCT_PROPERTIES #
-###############################################
+ro.product.build.version.incremental=1792952869
+ro.product.build.version.release=16
+ro.product.build.version.release_or_codename=16
+ro.product.build.version.sdk=36
+ro.product.build.version.sdk_full=36.1
+####################################
+# from gen_build_prop.py:generate_build_info
+####################################
+# begin build properties
+ro.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.build.id=BP4A.251205.006
+ro.build.display.id=BP4A.251205.006 test-keys
+ro.build.version.incremental=1792952869
+ro.build.version.sdk=36
+ro.build.version.sdk_full=36.1
+ro.build.version.preview_sdk=0
+ro.build.version.preview_sdk_fingerprint=REL
+ro.build.version.codename=REL
+ro.build.version.all_codenames=REL
+ro.build.version.known_codenames=Base,Base11,Cupcake,Donut,Eclair,Eclair01,EclairMr1,Froyo,Gingerbread,GingerbreadMr1,Honeycomb,HoneycombMr1,HoneycombMr2,IceCreamSandwich,IceCreamSandwichMr1,JellyBean,JellyBeanMr1,JellyBeanMr2,Kitkat,KitkatWatch,Lollipop,LollipopMr1,M,N,NMr1,O,OMr1,P,Q,R,S,Sv2,Tiramisu,UpsideDownCake,VanillaIceCream,Baklava
+ro.build.version.release=16
+ro.build.version.release_or_codename=16
+ro.build.version.release_or_preview_display=16
+ro.build.version.security_patch=2026-06-01
+ro.build.version.base_os=
+ro.build.version.min_supported_target_sdk=28
+ro.build.date=Sun Oct 25 21:27:49 MSK 2026
+ro.build.date.utc=1792952869
+ro.build.type=userdebug
+ro.build.user=valertos08
+ro.build.host=valertos08-Default-string
+ro.build.tags=test-keys
+ro.build.flavor=lineage_x86_64_tv-userdebug
+ro.lineage.device=x86_64_tablet
+# ro.product.cpu.abi and ro.product.cpu.abi2 are obsolete,
+# use ro.product.cpu.abilist instead.
+ro.product.cpu.abi=x86_64
+ro.product.locale=en-US
+ro.wifi.channels=
+# Do not try to parse description or thumbprint
+ro.build.description=lineage_x86_64_tv-userdebug 16 BP4A.251205.006 eng.valert test-keys
+# end build properties
+####################################
+# from variable ADDITIONAL_PRODUCT_PROPERTIES
+####################################
 ro.product.build.16k_page.enabled=false
+ro.product.page_size=4096
 ro.build.characteristics=tv
-ro.product.ab_ota_partitions=initrd,kernel,system
-ro.product.cpu.pagesize.max=4096
+ro.product.ab_ota_partitions=initrd,kernel,ramdisk-recovery,system
+ro.product.cpu.pagesize.max=16384
+# Value overridden by post_process_props.py. Original value: default
 ro.dalvik.vm.enable_uffd_gc=true
+####################################
+# from variable PRODUCT_PRODUCT_PROPERTIES
+####################################
+persist.wm.extensions.enabled=true
 tombstoned.max_tombstone_count=10
-###############################################
-# from variable PRODUCT_PRODUCT_PROPERTIES    #
-###############################################
+logd.logpersistd.size=5
+logd.logpersistd.rotate_kbytes=2048
 ro.com.google.clientidbase=android-google
-ro.com.google.gmsversion=GTVS_GTV_T_release
 ro.oem.key1=ATV00100020
-debug.renderengine.backend=skiaglthreaded
-ro.surface_flinger.supports_background_blur=0
-ro.surface_flinger.max_graphics_height=1080
-ro.surface_flinger.max_graphics_width=1920
-ro.lmk.kill_heaviest_task=true
-ro.lmk.kill_timeout_ms=100
-ro.lmk.use_minfree_levels=true
-ro.lmk.use_new_strategy=true
-persist.sys.nativebridge=1
-ro.dalvik.vm.isa.arm=x86
-ro.enable.native.bridge.exec=1
-ro.dalvik.vm.isa.arm64=x86_64
-ro.enable.native.bridge.exec64=1
-ro.dalvik.vm.native.bridge=libndk_translation.so
-sys.display-size=4096x2160
-ro.sf.lcd_density=320
-qemu.hw.mainkeys=1
-###############################################
+persist.sys.strictmode.disable=true
+ro.ota.allow_downgrade=true
+ro.control_privapp_permissions=enforce
+ro.storage_manager.enabled=true
+dalvik.vm.systemuicompilerfilter=speed
+debug.sf.enable_transaction_tracing=false
+setupwizard.theme=glif_v4
+setupwizard.feature.day_night_mode_enabled=true
+ro.lineage.version=23.2-20261025-UNOFFICIAL-x86_64_tv
+ro.lineage.display.version=23-20261025-UNOFFICIAL-x86_64_tv
+ro.lineage.build.version=23.2
+ro.lineage.releasetype=UNOFFICIAL
+ro.config.notification_sound=Argon.ogg
+ro.config.alarm_alert=Hassium.ogg
+ro.lineagelegal.url=https://lineageos.org/legal
+media.recorder.show_manufacturer_and_model=true
+persist.wm.extensions.activity_embedding_guard_with_android_15=false
+persist.settings.large_screen_opt.enabled=true
+ro.config.ringtone=Orion.ogg
+net.tethering.noprovisioning=true
+ro.com.android.mobiledata=false
+# end of file

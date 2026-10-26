@@ -24,7 +24,7 @@
 #error Edition required
 #endif
 #ifndef ROOT
-#define ROOT "/user/app/ps4-android"
+#define ROOT "/user/app/ps4-android16"
 #endif
 /* Boot files live in this app's own folder. The shared /data/linux/boot is
  * left alone, because another PS4 Linux setup may already own it. */

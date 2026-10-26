@@ -1,57 +1,42 @@
-##################################################
-# from generate-common-build-props               #
-# These properties identify this partition image #
-##################################################
-ro.product.vendor.brand=google
-ro.product.vendor.device=mustang
-ro.product.vendor.board=mustang
-ro.product.vendor.manufacturer=Google
-ro.product.vendor.model=Pixel 10 Pro XL
-ro.product.vendor.name=mustang
-ro.vendor.product.cpu.abilist=x86_64,x86,armeabi-v7a,armeabi,arm64-v8a
-ro.vendor.product.cpu.abilist32=x86,armeabi-v7a,armeabi
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.product.vendor.brand=Android-x86
+ro.product.vendor.device=x86_64_tablet
+ro.product.vendor.name=lineage_x86_64_tv
+ro.vendor.product.cpu.abilist=x86_64,x86,arm64-v8a
+ro.vendor.product.cpu.abilist32=x86
 ro.vendor.product.cpu.abilist64=x86_64,arm64-v8a
-ro.vendor.build.security_patch=2024-02-05
-ro.vendor.build.date=Tue Mar 31 2026 23:19:49 GMT-0300
-ro.vendor.build.date.utc=1775009989
-ro.vendor.build.fingerprint=google/mustang/mustang:16/CP1A.260305.018/14887507:user/release-keys
-ro.vendor.build.id=TQ3A.230901.001
-ro.vendor.build.tags=release-keys
+ro.vendor.build.date=Wed Oct 21 08:11:35 MSK 2026
+ro.vendor.build.date.utc=1792559495
+ro.vendor.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.vendor.build.id=BP4A.251205.006
+ro.vendor.build.tags=test-keys
 ro.vendor.build.type=userdebug
-ro.vendor.build.version.incremental=14887507
-ro.vendor.build.version.release=13
-ro.vendor.build.version.release_or_codename=13
-ro.vendor.build.version.sdk=33
-########################################################
-# from device/generic/x86_64_tv/properties/vendor.prop #
-########################################################
+ro.vendor.build.version.incremental=1792559495
+ro.vendor.build.version.release=16
+ro.vendor.build.version.release_or_codename=16
+ro.vendor.build.version.sdk=36
+ro.vendor.build.version.sdk_full=36.1
+####################################
+# from device/generic/x86_64_tablet/properties/vendor.prop
+####################################
+# DHCP
+vendor.recovery.dhcpclient.iface=eth0
 # Display
 ro.surface_flinger.enable_frame_rate_override=false
-# Codecs
-media.stagefright.thumbnail.prefer_hw_codecs=1
-persist.sys.media.avsync=true
-persist.ffmpeg.codec2.prefer=1
-vendor.ffmpeg.codec2.prefer=1
-system.ffmpeg.codec2.prefer=1
+# Recovery
+ro.recovery.supported_fs=9p,virtiofs,efivarfs
+# Media
 debug.stagefright.c2inputsurface=-1
-debug.ffmpeg-codec2.rank=0
-debug.ffmpeg-codec2.hwaccel.drm=0
-persist.ffmpeg-codec2.pixel_format=RGBX_8888
-media.sf.hwaccel=1
-ro.yuv420.disable=true
-# DRM
-drm.service.enabled=true
-# NRDP
-ro.vendor.nrdp.audio.mixer.buffersize=1024
-ro.vendor.nrdp.modelgroup=mustang
-# Wi-Fi
-ro.boot.wificountrycode=US
-wifi.direct.interface=p2p-dev-wlan0
-ro.carrier=wifi-only
-wifi.interface=wlan0
-##############################################
-# from variable ADDITIONAL_VENDOR_PROPERTIES #
-##############################################
+media.c2.hal.selection=aidl
+####################################
+# from android-info.prop
+####################################
+####################################
+# from variable ADDITIONAL_VENDOR_PROPERTIES
+####################################
 ro.bionic.arch=x86_64
 ro.bionic.cpu_variant=generic
 ro.bionic.2nd_arch=x86
@@ -61,41 +46,54 @@ dalvik.vm.isa.x86_64.variant=generic
 dalvik.vm.isa.x86_64.features=default
 dalvik.vm.isa.x86.variant=generic
 dalvik.vm.isa.x86.features=default
-ro.board.api_level=202404
+ro.product.first_api_level=10000
+ro.product.debugfs_restrictions.enabled=true
+ro.board.api_level=202504
 ro.board.api_frozen=true
-ro.product.board=mustang
-ro.soc.manufacturer=AMD
-ro.soc.model=Jaguar
-ro.board.platform=laguna
-###########################################
-# from variable PRODUCT_VENDOR_PROPERTIES #
-###########################################
+ro.vendor.build.security_patch=
+ro.product.board=
+ro.board.platform=android-x86
+ro.hwui.use_vulkan=
+ro.build.ab_update=true
+ro.vendor.build.ab_ota_partitions=initrd,kernel,ramdisk-recovery,system
+####################################
+# from variable PRODUCT_VENDOR_PROPERTIES
+####################################
 ro.zygote=zygote64_32
+keyguard.no_require_sim=true
+ro.com.android.dataroaming=true
+ro.config.ringtone=Ring_Synth_04.ogg
+# Removed by post_process_props.py because overridden by ro.config.notification_sound?=OnTheHunt.ogg
+#ro.config.notification_sound?=pixiedust.ogg
 tombstoned.max_tombstone_count=50
-dalvik.vm.heapstartsize=16m
-dalvik.vm.heapgrowthlimit=256m
-dalvik.vm.heapsize=512m
-dalvik.vm.heaptargetutilization=0.5
-dalvik.vm.heapminfree=8m
-dalvik.vm.heapmaxfree=32m
 ro.logd.size.stats=64K
 log.tag.stats_log=I
+ro.carrier=unknown
+ro.config.notification_sound=OnTheHunt.ogg
+ro.config.alarm_alert=Alarm_Classic.ogg
 ro.recovery.usb.vid=18D1
 ro.recovery.usb.adb.pid=D001
 ro.recovery.usb.fastboot.pid=4EE0
+# Removed by post_process_props.py because overridden by ro.zygote=zygote64_32
+#ro.zygote?=zygote32
 bluetooth.device.class_of_device=44,4,32
+ro.config.batteryless=true
 debug.angle.feature_overrides_enabled=preferLinearFilterForYUV
-############################################
-# from variable PRODUCT_PROPERTY_OVERRIDES #
-############################################
+drm.service.enabled=true
+####################################
+# from variable PRODUCT_DEFAULT_PROPERTY_OVERRIDES
+####################################
+####################################
+# from variable PRODUCT_PROPERTY_OVERRIDES
+####################################
+persist.sys.media.avsync=true
 ro.surface_flinger.update_device_product_info_on_hotplug_reconnect=1
 debug.wm.disable_deprecated_abi_dialog=true
-ro.config.media_vol_default=8
-ro.config.media_vol_steps=15
+ro.config.media_vol_default=20
+ro.config.media_vol_steps=25
 ro.lmk.kill_timeout_ms=100
-ro.arch=x86_64
+ro.arch=x86
 persist.rtc_local_time=1
-bluetooth.rfkill=1
 dalvik.vm.useautofastjni=true
 ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 audio.safemedia.bypass=true
@@ -103,13 +101,10 @@ persist.device_config.mglru_native.lru_gen_config=all
 persist.sys.zram_enabled=1
 external_storage.casefold.enabled=0
 external_storage.projid.enabled=1
-persist.sys.nativebridge=1
-ro.dalvik.vm.isa.arm=x86
-ro.enable.native.bridge.exec=1
-ro.dalvik.vm.isa.arm64=x86_64
-ro.enable.native.bridge.exec64=1
-ro.dalvik.vm.native.bridge=libndk_translation.so
-vendor.sys.display-size=4096x2160
-ro.sf.lcd_density=320
-qemu.hw.mainkeys=1
-############################################
+ro.berberis.flags=accurate-sigsegv
+ro.berberis.version=16.0.0
+# end of file
+
+# PS4 (Android TV for PS4)
+ro.soc.manufacturer=AMD
+ro.soc.model=Jaguar

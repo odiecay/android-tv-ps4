@@ -1,5 +1,4 @@
 on early-init
-    setprop ro.vndk.version 33
     setprop sys.use_memfd true
     export AMD_DEBUG notiling,useaco
 

@@ -140,13 +140,13 @@ touch /run/androidtv-ps4/bootstrap-active
 display_watchdog() {
  set +e
  sleep 60
- test_file=/mnt/ps4-user/app/ps4-android/test-no-picture
+ test_file=/mnt/ps4-user/app/ps4-android16/test-no-picture
  if [ -e /dev/fb0 ] && [ ! -e "$test_file" ]; then return 0; fi
  rm -f "$test_file"
  stage 'No picture after 60 seconds; saving the logs and restarting to the PS4'
  kill "$(cat /run/androidtv-ps4/keep-logs.pid 2>/dev/null)" 2>/dev/null
  hardware_report
- if grep -q ' /mnt/ps4-user ' /proc/mounts; then copy_logs /mnt/ps4-user/app/ps4-android/logs; fi
+ if grep -q ' /mnt/ps4-user ' /proc/mounts; then copy_logs /mnt/ps4-user/app/ps4-android16/logs; fi
  export_reports
  sync
  sleep 2
@@ -221,13 +221,13 @@ fi
 # sign-in fails before then. The launcher wrote logs/launcher.log seconds
 # before the handover, so its timestamp on the PS4 drive is close to the real
 # time; set the clock from it, plus the time Linux has been running since.
-if [ "$(date +%Y)" -lt 2024 ] && [ -f /mnt/ps4-user/app/ps4-android/logs/launcher.log ]; then
- launched=$(stat -c %Y /mnt/ps4-user/app/ps4-android/logs/launcher.log 2>/dev/null || echo 0)
+if [ "$(date +%Y)" -lt 2024 ] && [ -f /mnt/ps4-user/app/ps4-android16/logs/launcher.log ]; then
+ launched=$(stat -c %Y /mnt/ps4-user/app/ps4-android16/logs/launcher.log 2>/dev/null || echo 0)
  if [ "$launched" -gt 1700000000 ]; then
   date -s "@$((launched + $(cut -d. -f1 /proc/uptime)))" >/dev/null && stage "Clock set from the PS4: $(date -u '+%Y-%m-%d %H:%M UTC')"
  fi
 fi
-installation=/mnt/ps4-user/app/ps4-android
+installation=/mnt/ps4-user/app/ps4-android16
 # Later Slim and Pro models (CUH-7215/7216, Belize and Baikal) use a MediaTek
 # MT7668 for Wi-Fi. Its driver only loads when that chip is present. Driver
 # and firmware live on the drive, not in this initramfs, to keep boot memory low.
@@ -347,12 +347,7 @@ fi
 stage 'Mounting Android app storage'
 mount -t ext4 -o loop,noatime "$installation/data.img" /mnt/android-persistent
 stage 'System and userdata mounted; preparing graphics and media'
-for p in /android/system/lib/arm /android/system/lib64/arm64; do
- [ ! -L "$p" ] || rm "$p"
- mkdir -p "$p"
-done
-stage 'Preparing app compatibility libraries'
-tar -xzf "$installation/ndk-translation.tar.gz" -C /android/system
+# Android 16 dev: Lineage ships its own ARM translation (ndk_translation).
 cp "$assets/system-build.prop" /android/system/build.prop
 cp "$assets/vendor-build.prop" /android/system/vendor/build.prop
 cp "$assets/init.android_x86_64.rc" /android/system/vendor/etc/init/init.android_x86_64.rc
@@ -364,7 +359,6 @@ cp "$assets/product-build.prop" /android/system/product/etc/build.prop
 sed -i '/<permission name="android.permission.MANAGE_VIRTUAL_MACHINE">/,/<\/permission>/d' /android/system/etc/permissions/platform.xml
 ! grep -q '"virtualmachine"' /android/system/etc/permissions/platform.xml || stage 'Warning: could not remove the virtualmachine group mapping'
 cp "$assets/init.sh" /android/system/etc/init.sh
-cp "$assets/init.rc" /android/system/etc/init/hw/init.rc
 cp "$assets/androidtv-ps4.rc" /android/system/etc/init/androidtv-ps4.rc
 # OpenGL ES shaders are compiled with ACO, the compiler Vulkan uses. Mesa's
 # default (LLVM) emits a copy for every value carried around a loop on this
@@ -387,50 +381,23 @@ cp "$assets/device-name.rc" /android/system/etc/init/androidtv-device-name.rc
 cp "$assets/device-name.sh" /android/system/bin/androidtv-device-name.sh
 chmod 644 /android/system/etc/init/androidtv-device-name.rc /android/system/bin/androidtv-device-name.sh
 mkdir -p /android/system/vendor/etc/seccomp_policy
-cp "$assets/mediaextractor.policy" /android/system/vendor/etc/seccomp_policy/mediaextractor.policy
-chmod 644 /android/system/etc/init/androidtv-logging.rc /android/system/vendor/etc/seccomp_policy/mediaextractor.policy
+chmod 644 /android/system/etc/init/androidtv-logging.rc
 # Keep native APKs on internal storage, outside the small initramfs.
 # Signed APKs, splits and native libraries have their normal Android layout.
 # The read-only app filesystem stays on disk, outside the RAM overlay.
-mkdir -p /mnt/android-bundled-apps
-mount -t squashfs -o ro,loop "$installation/bundled-apps.sfs" /mnt/android-bundled-apps
-while read -r app; do
- target="/android/system/app/atv-$app"
- # Replace the base ARM service in its existing privileged product location.
- # Hiding that entire directory prevents duplicate packages and stale libraries.
- [ "$app" != gms ] || target=/android/system/product/priv-app/GooglePlayServices
- mkdir -p "$target"
- mount --bind "/mnt/android-bundled-apps/$app" "$target"
-done < "$assets/bundled-apps.txt"
+# Android 16 dev: Lineage's own apps, gralloc and Bluetooth. Only the display
+# composer comes from 13, because Lineage's hwc3 needs atomic modesetting and
+# the PS4 GPU only has the legacy display path.
 cp "$assets/bootanimation.zip" /android/system/product/media/bootanimation.zip
 chmod 644 /android/system/product/media/bootanimation.zip
-mkdir -p /android/system/app/AtvConnectivity
-cp "$assets/AtvConnectivity.apk" /android/system/app/AtvConnectivity/AtvConnectivity.apk
-chmod 755 /android/system/app/AtvConnectivity
-chmod 644 /android/system/app/AtvConnectivity/AtvConnectivity.apk
-# New installations are named "PlayStation 4"; Build.MODEL stays as it is.
-cp "$assets/AtvDeviceNameOverlay.apk" /android/system/product/overlay/AtvDeviceNameOverlay.apk
-cp "$assets/AtvScreensaverOverlay.apk" /android/system/product/overlay/AtvScreensaverOverlay.apk
-chmod 644 /android/system/product/overlay/AtvDeviceNameOverlay.apk /android/system/product/overlay/AtvScreensaverOverlay.apk
-cp "$assets/bpfloader.rc" /android/system/etc/init/bpfloader.rc
-cp "$assets/resolution.sh" /android/system/vendor/brtdtv/resolution.sh
-cp "$assets/gralloc-gbm-yv12-stride.so" /android/system/vendor/lib64/hw/gralloc.gbm.so
+rm -f /android/system/vendor/etc/init/hwc3-drm.rc /android/system/vendor/etc/vintf/manifest/hwc3-drm.xml
 cp "$assets/composer" /android/system/vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
 chmod 755 /android/system/vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
 cp "$assets/libatv-display-modes.so" /android/system/vendor/lib64/libatv-display-modes.so
-chmod 644 /android/system/vendor/lib64/libatv-display-modes.so
+cp "$assets/libhidltransport.so" /android/system/vendor/lib64/libhidltransport.so
 cp "$assets/hwcomposer.rc" /android/system/vendor/etc/init/android.hardware.graphics.composer@2.1-drmfb-service.rc
-# Bluetooth owns HCI through its HAL; Wi-Fi and Ethernet remain in Android.
-cp "$assets/bluetooth.rc" /android/system/vendor/etc/init/android.hardware.bluetooth@1.1-service.vbt.rc
-cp "$assets/bluetooth-scheduling.rc" /android/system/etc/init/androidtv-bluetooth.rc
-chmod 644 /android/system/vendor/etc/init/android.hardware.bluetooth@1.1-service.vbt.rc /android/system/etc/init/androidtv-bluetooth.rc
-# Scope the old event-mask workaround to the verified Marvell SD8797 device.
-if grep -q '^SDIO_ID=02DF:912A$' /sys/class/bluetooth/hci0/device/uevent 2>/dev/null; then
- cp "$assets/libatv-bluetooth-sd8797.so" /android/system/vendor/lib64/libatv-bluetooth-sd8797.so
- chmod 644 /android/system/vendor/lib64/libatv-bluetooth-sd8797.so
- printf '%s\n' '    setenv LD_PRELOAD /vendor/lib64/libatv-bluetooth-sd8797.so' >> /android/system/vendor/etc/init/android.hardware.bluetooth@1.1-service.vbt.rc
-fi
-chmod 644 /android/system/vendor/etc/init/android.hardware.graphics.composer@2.1-drmfb-service.rc
+cp "$assets/composer-drmfb.xml" /android/system/vendor/etc/vintf/manifest/atv-composer-drmfb.xml
+chmod 644 /android/system/vendor/lib64/libatv-display-modes.so /android/system/vendor/lib64/libhidltransport.so /android/system/vendor/etc/init/android.hardware.graphics.composer@2.1-drmfb-service.rc /android/system/vendor/etc/vintf/manifest/atv-composer-drmfb.xml
 printf '%s\n' 'none /cache tmpfs noatime,nosuid,nodev,mode=0770,uid=1000,gid=2001 defaults' > /android/fstab.mustang
 # USB sticks show up in Android as USB storage. The PS4's own drive can sit
 # behind the USB controller too (it does on fat Aeolia consoles), and Android
@@ -465,39 +432,13 @@ stage "USB storage for Android: $(grep -c voldmanaged /android/fstab.mustang) US
 cp "$assets/android-child.sh" /run/androidtv-ps4/android-child.sh
 cp "$assets/binder-devices" /run/androidtv-ps4/binder-devices
 cp "$assets/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
-cp /mnt/android-share/libgallium-baseline.so /android/system/vendor/lib64/dri/libgallium_dri.so
-echo 'ca0b4228ede6a6763568e6cafd4efc472f7d31eaae7622b03ad8d3dd3c7e545f  /android/system/vendor/lib64/dri/libgallium_dri.so' | sha256sum -c -
-# The native x86 YouTube/Kodi processes load the 32-bit Mesa driver.
-# Apply the same Liverpool raster correction to the exact pinned base library.
-# OverlayFS copies up this file; the distributed Android system stays untouched.
-mesa32=/android/system/vendor/lib/dri/libgallium_dri.so
-mesa32_sha=$(sha256sum "$mesa32" | cut -d ' ' -f 1)
-case "$mesa32_sha" in
- eb4db495721ec36dfa4d0cdb6378c845bd756c77748fae9aed14eacaf2389f1e)
-  printf '\032\026\000\052' | dd of="$mesa32" bs=1 seek=23111413 conv=notrunc 2>/dev/null
-  ;;
- fbac4a587e486de0e4f6f6b02dbe3c9495371735ca3c35e5e3cfbcc753d85c2c) ;;
- *) stage 'Unsupported 32-bit graphics library'; exit 1 ;;
-esac
-echo 'fbac4a587e486de0e4f6f6b02dbe3c9495371735ca3c35e5e3cfbcc753d85c2c  /android/system/vendor/lib/dri/libgallium_dri.so' | sha256sum -c -
-# PS4 Pro (Gladius, 1002:9924) has twice the shader engines and also needs
-# PA_SC_RASTER_CONFIG_1=0x2e. Point Mesa's Kaveri case at the block that sets
-# 0x2e and give it the Gladius raster config; patch-mesa-raster.py documents it.
+# Android 16 dev: Lineage's own Mesa 26 runs unmodified. It identifies the
+# PS4 GPU as Kaveri, like 13's; the Liverpool raster-config patch 13 applies
+# to its Mesa isn't ported yet, so some depth/stencil drawing may glitch.
 gpu=$(cat /sys/bus/pci/devices/*/device 2>/dev/null | grep -m1 -E '^0x992[0-4]$' || true)
 stage "GPU: ${gpu:-unknown}"
-if [ "$gpu" = 0x9924 ]; then
- mesa64=/android/system/vendor/lib64/dri/libgallium_dri.so
- printf '\141\273\025\001' | dd of="$mesa64" bs=1 seek=5873684 conv=notrunc 2>/dev/null
- printf '\052' | dd of="$mesa64" bs=1 seek=24071009 conv=notrunc 2>/dev/null
- echo "37934e40c2e566bc979935bf41443f52766fd78e7ce4762f3bf8263fb00d5dfd  $mesa64" | sha256sum -c -
- printf '\213\043\162\377' | dd of="$mesa32" bs=1 seek=5383584 conv=notrunc 2>/dev/null
- printf '\052' | dd of="$mesa32" bs=1 seek=23111439 conv=notrunc 2>/dev/null
- echo "fed7b1080589b15d7f7b3b008544b750707917b3110e53d1a67ce0f51d78dd93  $mesa32" | sha256sum -c -
- stage 'Applied PS4 Pro raster configuration'
-fi
 sh "$assets/controller-home.sh"
-echo '2d10e6f61a3d58cd8ccc64e03a94a6a48da82ce15c453cf7844979a0ec35b375  /android/system/vendor/lib64/hw/gralloc.gbm.so' | sha256sum -c -
-stage 'Launching Android init with verified graphics baseline (standard-v1)'
+stage 'Launching Android 16 init (internal dev)'
 set -eu
 chmod 755 /run/androidtv-ps4/android-child.sh /run/androidtv-ps4/binder-devices
 if ! grep -q '^xt_quota2 ' /proc/modules; then
@@ -509,7 +450,7 @@ if [ ! -s "$installation/device-id" ]; then
  sync
 fi
 serial=$(cat "$installation/device-id")
-printf '%s\n' "androidboot.hardware=mustang androidboot.selinux=permissive androidboot.fake_battery=1 androidboot.enable_console=0 androidboot.serialno=ps4${serial} HWC=default HWC_IS_DRMFB=1 GRALLOC=gbm" > /run/androidtv-ps4/android-cmdline
+printf '%s\n' "androidboot.hardware=mustang androidboot.selinux=permissive androidboot.fake_battery=1 androidboot.enable_console=0 androidboot.serialno=ps4${serial} HWC_HIDL=drmfb GRALLOC=gbm" > /run/androidtv-ps4/android-cmdline
 echo on > /proc/sys/kernel/printk_devkmsg
 echo 7 > /proc/sys/kernel/printk
 trap '' HUP

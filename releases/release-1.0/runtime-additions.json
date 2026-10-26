@@ -65,6 +65,16 @@
       "sha256": "64a04c1047efa12cbda4d42d36df3848038d6171680d2118194a4a49b250f281",
       "mode": "0755",
       "source": "Ubuntu e2fsprogs 1.47.2-1ubuntu1 /usr/sbin/tune2fs, the same build as the mke2fs and e2fsck already in the initramfs; uses the libext2fs, libe2p, libcom_err, libblkid and libuuid already present"
+    },
+    "opt/androidtv-ps4/composer-drmfb.xml": {
+      "sha256": "7d3bba3790fafbe431ea0e1f04709715b23973c43af36700ac95c483b79a204b",
+      "source": "Android TV for PS4 16 dev",
+      "mode": "0644"
+    },
+    "opt/androidtv-ps4/libhidltransport.so": {
+      "sha256": "fd5930ff825e8171fcca18ec2fa1564f89e1add43e66a59d0351553e4f0fedae",
+      "source": "Android TV for PS4 13 base system (BRTDTV) /system/lib64",
+      "mode": "0644"
     }
   }
 }

@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse,os,subprocess,shutil,hashlib,json
 p=argparse.ArgumentParser()
 for arg in ['sdk','template','objects','runtime','assets','build','output','probe-build','probe-linker']:p.add_argument('--'+arg,type=Path,required=True)
-a=p.parse_args();root=Path(__file__).resolve().parent;b=a.build.resolve();b.mkdir(parents=True,exist_ok=True);out=a.output.resolve();out.mkdir(parents=True,exist_ok=True);sdk=a.sdk.resolve();tools=sdk/'bin/linux';src=root/'source';cid='IV0000-ATVX13001_00-PS4ANDROIDTV0000'
+a=p.parse_args();root=Path(__file__).resolve().parent;b=a.build.resolve();b.mkdir(parents=True,exist_ok=True);out=a.output.resolve();out.mkdir(parents=True,exist_ok=True);sdk=a.sdk.resolve();tools=sdk/'bin/linux';src=root/'source';cid='IV0000-ATVX16001_00-PS4ANDROIDTV1600'
 source_hashes={x.name:hashlib.file_digest(x.open('rb'),'sha256').hexdigest() for x in sorted(src.iterdir()) if x.is_file()}
 def digest(path):
  with path.open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
@@ -79,7 +79,7 @@ for i in range(4):
 env=dict(os.environ,OO_PS4_TOOLCHAIN=str(sdk),DOTNET_SYSTEM_GLOBALIZATION_INVARIANT='1',LD_LIBRARY_PATH=str(a.runtime.resolve()))
 def run(args):subprocess.run([str(x) for x in args],cwd=b,env=env,check=True)
 run([tools/'create-fself','-in=launcher.elf','-out=launcher.oelf','--eboot','eboot.bin','--paid','0x3800000000000011'])
-for key,value in [('CONTENT_ID',cid),('APP_VER','1.10'),('VERSION','1.10'),('TITLE','Android TV for PS4')]:run([tools/'PkgTool.Core','sfo_setentry','sce_sys/param.sfo',key,'--type','Utf8','--maxsize','48' if key=='CONTENT_ID' else '128' if key=='TITLE' else '8','--value',value])
+for key,value in [('CONTENT_ID',cid),('APP_VER','1.10'),('VERSION','1.10'),('TITLE','Android TV 16 Dev'),('TITLE_ID','ATVX16001')]:run([tools/'PkgTool.Core','sfo_setentry','sce_sys/param.sfo',key,'--type','Utf8','--maxsize','48' if key=='CONTENT_ID' else '128' if key=='TITLE' else '12' if key=='TITLE_ID' else '8','--value',value])
 # Structural PKG validation does not enforce agreement with param.sfo.
 import struct
 sfo=(b/'sce_sys/param.sfo').read_bytes()

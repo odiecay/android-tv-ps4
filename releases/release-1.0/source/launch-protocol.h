@@ -5,13 +5,13 @@
 #define ATV_LAUNCH_MAGIC 0x41545632U
 #define ATV_LAUNCH_VERSION 4U
 #ifndef ATV_CONTROL_PATH
-#define ATV_CONTROL_PATH "/data/atv-launch-control.bin"
+#define ATV_CONTROL_PATH "/data/atv16-launch-control.bin"
 #endif
 #ifndef ATV_RESULT_PATH
-#define ATV_RESULT_PATH "/data/atv-payload-result.bin"
+#define ATV_RESULT_PATH "/data/atv16-payload-result.bin"
 #endif
 #ifndef ATV_BOOT_DIR
-#define ATV_BOOT_DIR "/user/app/ps4-android/boot"
+#define ATV_BOOT_DIR "/user/app/ps4-android16/boot"
 #endif
 struct atv_launch_control {
  unsigned int magic, version;
