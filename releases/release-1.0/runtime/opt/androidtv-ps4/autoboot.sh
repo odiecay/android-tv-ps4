@@ -349,6 +349,25 @@ save_logs() {
 # current: every 10 seconds while Android starts, so a hang still leaves its
 # logs, then every minute. Once Android runs, running.log also records its
 # Wi-Fi interface and recent Wi-Fi and network messages.
+# Dev build: purple lights (Codey's choice). The console LED shows violet-blue
+# once Android starts, and every controller light bar is kept purple.
+lights() {
+ set +e
+ led=/sys/class/leds
+ # The ICC boot step turns the LED blue without the LED driver knowing, so
+ # switch to another colour first or the driver skips the request.
+ echo 255 > "$led/ps4:white:status/brightness"
+ echo 255 > "$led/ps4:violet_blue:status/brightness"
+ while [ ! -f /run/androidtv-ps4/power-request ]; do
+  for red in "$led"/input*:red; do
+   [ -e "$red/brightness" ] || continue
+   pad=${red%:red}
+   [ "$(cat "$red/brightness")" = 150 ] && [ "$(cat "$pad:blue/brightness")" = 255 ] && continue
+   echo 150 > "$red/brightness"; echo 0 > "$pad:green/brightness"; echo 255 > "$pad:blue/brightness"
+  done
+  sleep 2
+ done
+}
 keep_logs() {
  set +e
  while [ ! -f /run/androidtv-ps4/power-request ]; do
@@ -631,6 +650,7 @@ mount --bind /proc/self/ns/net /run/androidtv-ps4/host-netns
 # From here a failure leaves Android running; no clean-up stops it.
 hardware_report
 touch /run/androidtv-ps4/android-launched
+lights </dev/null >/dev/null 2>&1 &
 touch /run/androidtv-ps4/bootstrap-active
 /usr/sbin/android-supervisor -- /bin/sh /run/androidtv-ps4/android-child.sh </dev/null >/run/androidtv-ps4/android.log 2>&1 &
 echo $! > /run/androidtv-ps4/android-supervisor.pid
