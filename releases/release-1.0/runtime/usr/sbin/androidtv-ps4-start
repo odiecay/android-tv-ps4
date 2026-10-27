@@ -154,12 +154,66 @@ stop_safely() {
   until export_reports; do sleep 5; done
  fi
 }
+# Dev build: when Android does not start, stay up so the cause can be read
+# live, then restart to the PS4 by itself. If the install folder has a file
+# debug-host ("IP PORT"), Linux takes a DHCP address on the wired port and
+# connects out to that one computer with a shell for up to 20 minutes, or
+# until /run/androidtv-ps4/debug-done exists. Nothing listens on the network.
+dev_net_up() {
+ dev=eth0; [ -e /sys/class/net/eth0 ] || dev=psx0
+ [ -e "/sys/class/net/$dev" ] || return 1
+ cat > /run/androidtv-ps4/udhcpc.sh <<'SCRIPT'
+#!/bin/sh
+case "$1" in bound|renew)
+ ip addr flush dev "$interface"
+ ip addr add "$ip/${mask:-24}" dev "$interface"
+ [ -z "$router" ] || ip route replace default via "${router%% *}" dev "$interface";;
+esac
+SCRIPT
+ chmod 755 /run/androidtv-ps4/udhcpc.sh
+ ip link set "$dev" up
+ udhcpc -i "$dev" -s /run/androidtv-ps4/udhcpc.sh -q -n -t 10 -T 2 >/dev/null 2>&1
+}
+dev_recover() {
+ [ ! -f /run/androidtv-ps4/dev-recover ] || return 0
+ touch /run/androidtv-ps4/dev-recover
+ set +e
+ host=
+ [ -z "$installation" ] || [ ! -r "$installation/debug-host" ] || host=$(cat "$installation/debug-host")
+ stage 'Dev build: staying up to save the logs; it restarts to the PS4 by itself'
+ # About 30 seconds of copies, so late kernel messages reach the stick too.
+ for copy in 1 2 3 4 5 6; do usb_mirror >/dev/null 2>&1; sleep 5; done
+ wait_s=0
+ if [ -n "$host" ] && dev_net_up; then
+  stage "Dev build: debug shell connecting to $host for up to 20 minutes"
+  ( while [ ! -f /run/androidtv-ps4/debug-done ]; do nc -w 10 ${host% *} ${host#* } -e /bin/sh; sleep 3; done ) </dev/null >/dev/null 2>&1 &
+  wait_s=1200
+ fi
+ waited=0
+ while [ "$waited" -lt "$wait_s" ] && [ ! -f /run/androidtv-ps4/debug-done ]; do
+  sleep 5; waited=$((waited + 5))
+  [ $((waited % 30)) -ne 0 ] || usb_mirror >/dev/null 2>&1
+ done
+ kill "$(cat /run/androidtv-ps4/keep-logs.pid 2>/dev/null)" 2>/dev/null
+ hardware_report
+ [ -z "$installation" ] || copy_logs "$installation/logs"
+ usb_mirror >/dev/null 2>&1
+ stage 'Dev build: restarting to the PS4'
+ sync
+ for mount in /mnt/android-bundled-apps /mnt/android-persistent /android /mnt/android-lower /mnt/android-sfs /mnt/android-share /mnt/ps4-user; do
+  umount "$mount" 2>/dev/null
+ done
+ sync
+ sleep 2
+ reboot -f
+}
 on_exit() {
  status=$?
  hardware_report
  if [ -n "$installation" ] && [ -d "$installation" ]; then save_logs "$status"; fi
  if [ "$status" -ne 0 ]; then
   stage "SETUP FAILED (status $status, build $(sed -n 's/.*androidtv.boot_id=\([^ ]*\).*/\1/p' /proc/cmdline)); data preserved"
+  dev_recover
   stop_safely
  fi
 }
