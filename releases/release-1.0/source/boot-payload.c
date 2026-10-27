@@ -37,6 +37,13 @@ static unsigned long long clock_us(void){return sceKernelGetProcessTime();}
 static int (*mapmem)(void*,size_t,int,int,int,off_t,void**);
 static int (*unmapmem)(void*,size_t);
 static void copybytes(void*d,const void*s,size_t n){for(size_t i=0;i<n;i++)((unsigned char*)d)[i]=((const unsigned char*)s)[i];}
+#ifdef ATV_DEV_KERNEL_OVERRIDE
+/* zlib CRC-32, the same one the loader reports for the staged kernel. */
+static unsigned dev_crc32(const unsigned char*p,size_t n){
+ unsigned t[256];for(unsigned i=0;i<256;i++){unsigned c=i;for(int k=0;k<8;k++)c=c&1?0xedb88320U^(c>>1):c>>1;t[i]=c;}
+ unsigned c=~0U;while(n--)c=t[(c^*p++)&0xff]^(c>>8);return ~c;
+}
+#endif
 static int image(const char*path,void**data,size_t n){
  int f=open(path,O_RDONLY,0);if(f<0)return -1;
  if(lseek(f,0,2)!=(off_t)n||lseek(f,0,0)<0){close(f);return -2;}
@@ -83,7 +90,19 @@ int _main(void){
  /* The small foreground app has already released its file-backed artwork.
   * Prepare Linux now; ARM still requires an explicit display release below. */
  if((sb>>16)==ATV_SB_FAMILY_BAIKAL){kernel_path=ATV_BOOT_DIR "/bzImage-baikal";kernel_bytes=ATV_KERNEL_BAIKAL_BYTES;kernel_crc=ATV_KERNEL_BAIKAL_CRC32;}
+#ifdef ATV_DEV_KERNEL_OVERRIDE
+ /* Dev builds only: a kernel copied in as bzImage-dev boots without a PKG
+  * rebuild. Its size and checksum come from the file, so the loader's staging
+  * check still catches a damaged copy. Public builds never define this. */
+ int dev_kernel=0;
+ {int f=open(ATV_BOOT_DIR "/bzImage-dev",O_RDONLY,0);
+  if(f>=0){off_t n=lseek(f,0,2);close(f);
+   if(n>0&&(size_t)n<=ATV_DEV_KERNEL_MAX){kernel_path=ATV_BOOT_DIR "/bzImage-dev";kernel_bytes=(size_t)n;dev_kernel=1;}}}
+#endif
  out.rc=image(kernel_path,&kernel,kernel_bytes);if(out.rc)goto done;
+#ifdef ATV_DEV_KERNEL_OVERRIDE
+ if(dev_kernel)kernel_crc=dev_crc32((const unsigned char*)kernel,kernel_bytes);
+#endif
  out.rc=image(ATV_BOOT_DIR "/initramfs.cpio.xz",&initrd,ATV_INITRD_BYTES);if(out.rc)goto done;
  char args[1024]={0};int fd=open(ATV_BOOT_DIR "/bootargs.txt",O_RDONLY,0);
  if(fd<0){out.rc=-104;goto done;}ssize_t got=read(fd,args,sizeof(args)-1);close(fd);
