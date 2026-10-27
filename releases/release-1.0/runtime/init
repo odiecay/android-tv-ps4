@@ -47,6 +47,8 @@ usb_startup_logs() {
             [ -e "$block" ] || continue
             name=${block##*/}; disk=${name%%[0-9]*}
             [ -b "/dev/${disk}27" ] && continue
+            # Use the partition, not a whole stick that has one (no probe errors).
+            ls -d "$block"/"$name"[0-9]* >/dev/null 2>&1 && continue
             mkdir -p /mnt/usb-logs
             mount -t vfat "/dev/$name" /mnt/usb-logs 2>/dev/null || mount -t exfat "/dev/$name" /mnt/usb-logs 2>/dev/null || continue
             out=/mnt/usb-logs/AndroidTV-PS4-logs

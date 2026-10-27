@@ -96,6 +96,9 @@ copy_logs() {
 export_reports() {
  for block in /sys/class/block/sd*; do
   name=${block##*/}
+  # A whole stick with partitions: use the partition, not the disk, or the
+  # kernel prints exFAT/FAT probe errors on every copy.
+  ls -d "$block"/"$name"[0-9]* >/dev/null 2>&1 && continue
   # Never write to the console's own drive (the disk with partition 27); some
   # of its partitions are FAT. This holds even when the drive was never found.
   [ -b "/dev/${name%%[0-9]*}27" ] && continue
@@ -118,6 +121,9 @@ usb_mirror() {
  init_pid=$(cat /run/androidtv-ps4/android-init.pid 2>/dev/null)
  for block in /sys/class/block/sd*; do
   name=${block##*/}
+  # A whole stick with partitions: use the partition, not the disk, or the
+  # kernel prints exFAT/FAT probe errors on every copy.
+  ls -d "$block"/"$name"[0-9]* >/dev/null 2>&1 && continue
   [ -b "/dev/${name%%[0-9]*}27" ] && continue
   [ -r "$block/dev" ] || continue
   devno=$(cat "$block/dev")
@@ -651,6 +657,8 @@ mount --bind /proc/self/ns/net /run/androidtv-ps4/host-netns
 hardware_report
 touch /run/androidtv-ps4/android-launched
 lights </dev/null >/dev/null 2>&1 &
+# PS button: short press Home, hold for the power menu (Restart / Power off).
+/opt/androidtv-ps4/ps-button </dev/null >/run/androidtv-ps4/ps-button.log 2>&1 &
 touch /run/androidtv-ps4/bootstrap-active
 /usr/sbin/android-supervisor -- /bin/sh /run/androidtv-ps4/android-child.sh </dev/null >/run/androidtv-ps4/android.log 2>&1 &
 echo $! > /run/androidtv-ps4/android-supervisor.pid
