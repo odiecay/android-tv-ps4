@@ -14,8 +14,3 @@ on property:init.svc.surfaceflinger=running
 on property:sys.boot_completed=1
     write /proc/sys/kernel/printk 1
     write /dev/kmsg "<6>[Android TV] Boot complete"
-
-# Dev build: Lineage's full logger (logcat -b all -f /data/log.txt) from the
-# moment app storage is up, so a crash that repeats is still seen from the start.
-on post-fs-data
-    setprop debug.logcat 1

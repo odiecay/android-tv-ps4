@@ -93,7 +93,6 @@ copy_logs() {
  # stick is only mounted for about a second and is safe to pull.
  for f in /run/androidtv-ps4/*.log /run/androidtv-ps4/*.txt; do
   [ -e "$f" ] || continue
-  case "${USB_LIGHT:-0}:${f##*/}" in 1:logcat-full.log|1:logcat-start.log) continue ;; esac
   cp "$f" "$1/" 2>/dev/null || true
  done
  [ ! -d /run/androidtv-ps4/crash ] || cp -r /run/androidtv-ps4/crash "$1/" 2>/dev/null || true
@@ -124,7 +123,7 @@ export_reports() {
  done
  return 1
 }
-# Dev build: mirror the logs folder to a USB stick on every cycle, so a hang
+# Mirror the logs folder to a USB stick on every cycle, so a hang
 # or black screen still leaves everything on the stick. One writer per stick:
 # if Android has mounted it (USB storage), write through Android's own mount;
 # otherwise mount it here just for the copy. Never the console's own drive.
@@ -171,66 +170,12 @@ stop_safely() {
   until export_reports; do sleep 5; done
  fi
 }
-# Dev build: when Android does not start, stay up so the cause can be read
-# live, then restart to the PS4 by itself. If the install folder has a file
-# debug-host ("IP PORT"), Linux takes a DHCP address on the wired port and
-# connects out to that one computer with a shell for up to 20 minutes, or
-# until /run/androidtv-ps4/debug-done exists. Nothing listens on the network.
-dev_net_up() {
- dev=eth0; [ -e /sys/class/net/eth0 ] || dev=psx0
- [ -e "/sys/class/net/$dev" ] || return 1
- cat > /run/androidtv-ps4/udhcpc.sh <<'SCRIPT'
-#!/bin/sh
-case "$1" in bound|renew)
- ip addr flush dev "$interface"
- ip addr add "$ip/${mask:-24}" dev "$interface"
- [ -z "$router" ] || ip route replace default via "${router%% *}" dev "$interface";;
-esac
-SCRIPT
- chmod 755 /run/androidtv-ps4/udhcpc.sh
- ip link set "$dev" up
- udhcpc -i "$dev" -s /run/androidtv-ps4/udhcpc.sh -q -n -t 10 -T 2 >/dev/null 2>&1
-}
-dev_recover() {
- [ ! -f /run/androidtv-ps4/dev-recover ] || return 0
- touch /run/androidtv-ps4/dev-recover
- set +e
- host=
- [ -z "$installation" ] || [ ! -r "$installation/debug-host" ] || host=$(cat "$installation/debug-host")
- stage 'Dev build: staying up to save the logs; it restarts to the PS4 by itself'
- # About 30 seconds of copies, so late kernel messages reach the stick too.
- for copy in 1 2 3 4 5 6; do usb_mirror >/dev/null 2>&1; sleep 5; done
- wait_s=0
- if [ -n "$host" ] && dev_net_up; then
-  stage "Dev build: debug shell connecting to $host for up to 20 minutes"
-  ( while [ ! -f /run/androidtv-ps4/debug-done ]; do nc -w 10 ${host% *} ${host#* } -e /bin/sh; sleep 3; done ) </dev/null >/dev/null 2>&1 &
-  wait_s=1200
- fi
- waited=0
- while [ "$waited" -lt "$wait_s" ] && [ ! -f /run/androidtv-ps4/debug-done ]; do
-  sleep 5; waited=$((waited + 5))
-  [ $((waited % 30)) -ne 0 ] || usb_mirror >/dev/null 2>&1
- done
- kill "$(cat /run/androidtv-ps4/keep-logs.pid 2>/dev/null)" 2>/dev/null
- hardware_report
- [ -z "$installation" ] || copy_logs "$installation/logs"
- usb_mirror >/dev/null 2>&1
- stage 'Dev build: restarting to the PS4'
- sync
- for mount in /mnt/android-bundled-apps /mnt/android-persistent /android /mnt/android-lower /mnt/android-sfs /mnt/android-share /mnt/ps4-user; do
-  umount "$mount" 2>/dev/null
- done
- sync
- sleep 2
- reboot -f
-}
 on_exit() {
  status=$?
  hardware_report
  if [ -n "$installation" ] && [ -d "$installation" ]; then save_logs "$status"; fi
  if [ "$status" -ne 0 ]; then
   stage "SETUP FAILED (status $status, build $(sed -n 's/.*androidtv.boot_id=\([^ ]*\).*/\1/p' /proc/cmdline)); data preserved"
-  dev_recover
   stop_safely
  fi
 }
@@ -239,7 +184,7 @@ touch /run/androidtv-ps4/bootstrap-active
 # If the GPU never gives a picture, the screen stays black and the power button
 # is the only way out. The picture normally appears a few seconds after Linux
 # starts, so after a minute without one: save the logs to the console and any
-# USB stick, flush the PS4 drive, and restart to the PS4 system. A file called
+# USB stick and flush the PS4 drive, so holding power loses nothing. A file called
 # test-no-picture in the install folder makes this act as if there were no
 # picture, to test it on a console where the picture works.
 display_watchdog() {
@@ -248,14 +193,12 @@ display_watchdog() {
  test_file=/mnt/ps4-user/app/ps4-android16/test-no-picture
  if [ -e /dev/fb0 ] && [ ! -e "$test_file" ]; then return 0; fi
  rm -f "$test_file"
- stage 'No picture after 60 seconds; saving the logs and restarting to the PS4'
+ stage 'No picture after 60 seconds; logs saved. Hold the power button to turn the PS4 off'
  kill "$(cat /run/androidtv-ps4/keep-logs.pid 2>/dev/null)" 2>/dev/null
  hardware_report
  if grep -q ' /mnt/ps4-user ' /proc/mounts; then copy_logs /mnt/ps4-user/app/ps4-android16/logs; fi
  export_reports
  sync
- sleep 2
- reboot -f
 }
 display_watchdog </dev/null >/dev/null 2>&1 &
 # The internal drive is the disk with Sony's partition 27; no USB stick has
@@ -367,25 +310,6 @@ save_logs() {
 # current: every 10 seconds while Android starts, so a hang still leaves its
 # logs, then every minute. Once Android runs, running.log also records its
 # Wi-Fi interface and recent Wi-Fi and network messages.
-# Dev build: purple lights (Codey's choice). The console LED shows violet-blue
-# once Android starts, and every controller light bar is kept purple.
-lights() {
- set +e
- led=/sys/class/leds
- # The ICC boot step turns the LED blue without the LED driver knowing, so
- # switch to another colour first or the driver skips the request.
- echo 255 > "$led/ps4:white:status/brightness"
- echo 255 > "$led/ps4:violet_blue:status/brightness"
- while [ ! -f /run/androidtv-ps4/power-request ]; do
-  for red in "$led"/input*:red; do
-   [ -e "$red/brightness" ] || continue
-   pad=${red%:red}
-   [ "$(cat "$red/brightness")" = 150 ] && [ "$(cat "$pad:blue/brightness")" = 255 ] && continue
-   echo 150 > "$red/brightness"; echo 0 > "$pad:green/brightness"; echo 255 > "$pad:blue/brightness"
-  done
-  sleep 2
- done
-}
 keep_logs() {
  set +e
  while [ ! -f /run/androidtv-ps4/power-request ]; do
@@ -415,15 +339,9 @@ keep_logs() {
     sed -E -e 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<removed>/g' -e 's/[A-Za-z0-9_+\/=-]{24,}/<removed>/g' |
     tail -300 > /run/androidtv-ps4/google-services.tmp
    mv /run/androidtv-ps4/google-services.tmp /run/androidtv-ps4/google-services.log
-   # Internal dev build only: the whole recent Android log, for bring-up.
+   # The recent Android log (last 3000 lines).
    timeout 10 nsenter -t "$child" -m -p -n /system/bin/logcat -d -b main,system,crash,events -t 3000 > /run/androidtv-ps4/logcat.tmp 2>&1
    mv /run/androidtv-ps4/logcat.tmp /run/androidtv-ps4/logcat.log
-   # The newest 4 MB of the full log Lineage writes from early boot.
-   tail -c 4000000 "/proc/$child/root/data/log.txt" > /run/androidtv-ps4/logcat-full.tmp 2>/dev/null &&
-    mv /run/androidtv-ps4/logcat-full.tmp /run/androidtv-ps4/logcat-full.log
-   # And the first 6 MB, so the first failure survives any restarts after it.
-   head -c 6000000 "/proc/$child/root/data/log.txt" > /run/androidtv-ps4/logcat-start.tmp 2>/dev/null &&
-    mv /run/androidtv-ps4/logcat-start.tmp /run/androidtv-ps4/logcat-start.log
    # Every record Android keeps of a system process death: native crash
    # tombstones, watchdog/ANR thread dumps and the dropbox crash archive.
    for kind in tombstones anr system/dropbox; do
@@ -508,7 +426,7 @@ if [ -n "$quota_features" ] && ! /usr/sbin/tune2fs -l "$installation/data.img" 2
 fi
 stage 'Mounting Android app storage'
 mount -t ext4 -o loop,noatime "$installation/data.img" /mnt/android-persistent
-# Dev build: a hard power-off mid-boot can leave Android's runtime permission
+# A hard power-off mid-boot can leave Android's runtime permission
 # store truncated, and Android 16 then stops system_server on every start
 # ("Missing <runtime-permissions>"). Move a damaged one aside; Android rebuilds it.
 perm=/mnt/android-persistent/data/misc_de/0/apexdata/com.android.permission/runtime-permissions.xml
@@ -517,7 +435,7 @@ if [ -f "$perm" ] && ! grep -aq 'runtime-permissions' "$perm"; then
  stage 'Android permission store was damaged; moved aside so Android rebuilds it'
 fi
 stage 'System and userdata mounted; preparing graphics and media'
-# Android 16 dev: Lineage ships its own ARM translation (ndk_translation).
+# Android 16: Lineage ships its own ARM translation (ndk_translation).
 cp "$assets/system-build.prop" /android/system/build.prop
 cp "$assets/vendor-build.prop" /android/system/vendor/build.prop
 cp "$assets/init.android_x86_64.rc" /android/system/vendor/etc/init/init.android_x86_64.rc
@@ -555,7 +473,7 @@ chmod 644 /android/system/etc/init/androidtv-logging.rc
 # Keep native APKs on internal storage, outside the small initramfs.
 # Signed APKs, splits and native libraries have their normal Android layout.
 # The read-only app filesystem stays on disk, outside the RAM overlay.
-# Android 16 dev: Lineage's own apps, gralloc and Bluetooth. Only the display
+# Android 16: Lineage's own apps, gralloc and Bluetooth. Only the display
 # composer comes from 13, because Lineage's hwc3 needs atomic modesetting and
 # the PS4 GPU only has the legacy display path.
 # Android 16 runs /system/xbin/overlay_remounter when its root is an overlay
@@ -614,16 +532,12 @@ while read -r pattern _; do
   break ;;
  esac
 done < /android/fstab.lineage_x86_64_tv
-# Dev build: USB sticks stay with Linux, which mirrors the logs and unmounts
-# after every copy. When Android also mounted the stick it was never
-# unmounted, so pulling it damaged the FAT filesystem.
-sed -i '/voldmanaged/d' /android/fstab.lineage_x86_64_tv
-stage 'USB sticks kept for logs (not offered to Android in this dev build)'
+stage "USB storage for Android: $(grep -c voldmanaged /android/fstab.lineage_x86_64_tv) USB hubs; PS4 drive port ${internal_port:-not on USB} left out"
 cp "$assets/android-child.sh" /run/androidtv-ps4/android-child.sh
 cp "$assets/binder-devices" /run/androidtv-ps4/binder-devices
 cp "$assets/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
 cp "$assets/android_usb_class.ko" /run/androidtv-ps4/android_usb_class.ko
-# Android 16 dev: Lineage's own Mesa 26 runs unmodified. It identifies the
+# Android 16: Lineage's own Mesa 26 runs unmodified. It identifies the
 # PS4 GPU as Kaveri, like 13's; the Liverpool raster-config patch 13 applies
 # to its Mesa isn't ported yet, so some depth/stencil drawing may glitch.
 gpu=$(cat /sys/bus/pci/devices/*/device 2>/dev/null | grep -m1 -E '^0x992[0-4]$' || true)
@@ -668,7 +582,6 @@ mount --bind /proc/self/ns/net /run/androidtv-ps4/host-netns
 # From here a failure leaves Android running; no clean-up stops it.
 hardware_report
 touch /run/androidtv-ps4/android-launched
-lights </dev/null >/dev/null 2>&1 &
 # PS button: short press Home, hold for the power menu (Restart / Power off).
 /opt/androidtv-ps4/ps-button </dev/null >/run/androidtv-ps4/ps-button.log 2>&1 &
 touch /run/androidtv-ps4/bootstrap-active
@@ -728,7 +641,7 @@ echo "Android network attached to namespace owned by PID $child"
 stage 'Android init launched; diagnostics continue in android-stages.log'
 # These logs are created on this console, never included in the release package.
 # Android init owns the rotating collector in /data/misc/logd; it survives setup.
-# Dev build: about 10 minutes, since Android 16's first boot compiles a lot.
+# About 10 minutes, since Android 16's first boot compiles a lot.
 for attempt in $(seq 1 300); do
  if [ -f /run/androidtv-ps4/power-request ]; then exit 0; fi
  now=$(cut -d' ' -f1 /proc/uptime)
