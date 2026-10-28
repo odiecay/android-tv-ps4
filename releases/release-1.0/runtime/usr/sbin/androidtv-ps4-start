@@ -492,12 +492,11 @@ elif [ -f "$installation/gpu-llvm" ]; then
 else
  stage 'Shader compiler: ACO'
 fi
-cp "$assets/androidtv-logging.rc" /android/system/etc/init/androidtv-logging.rc
+# No persistent Android log: nothing is recorded while Android is used.
 cp "$assets/device-name.rc" /android/system/etc/init/androidtv-device-name.rc
 cp "$assets/device-name.sh" /android/system/bin/androidtv-device-name.sh
 chmod 644 /android/system/etc/init/androidtv-device-name.rc /android/system/bin/androidtv-device-name.sh
 mkdir -p /android/system/vendor/etc/seccomp_policy
-chmod 644 /android/system/etc/init/androidtv-logging.rc
 # Keep native APKs on internal storage, outside the small initramfs.
 # Signed APKs, splits and native libraries have their normal Android layout.
 # The read-only app filesystem stays on disk, outside the RAM overlay.
