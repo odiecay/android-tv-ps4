@@ -2,15 +2,17 @@
 # from generate-common-build-props
 # These properties identify this partition image.
 ####################################
-ro.product.vendor.brand=Android-x86
-ro.product.vendor.device=x86_64_tablet
-ro.product.vendor.name=lineage_x86_64_tv
+ro.product.vendor.brand=google
+ro.product.vendor.manufacturer=Google
+ro.product.vendor.model=Google TV Streamer
+ro.product.vendor.device=kirkwood
+ro.product.vendor.name=kirkwood
 ro.vendor.product.cpu.abilist=x86_64,x86,arm64-v8a
 ro.vendor.product.cpu.abilist32=x86
 ro.vendor.product.cpu.abilist64=x86_64,arm64-v8a
 ro.vendor.build.date=Wed Oct 21 08:11:35 MSK 2026
 ro.vendor.build.date.utc=1792559495
-ro.vendor.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.vendor.build.fingerprint=google/kirkwood/kirkwood:14/UTTK.260317.003/15205007:user/release-keys
 ro.vendor.build.id=BP4A.251205.006
 ro.vendor.build.tags=test-keys
 ro.vendor.build.type=userdebug

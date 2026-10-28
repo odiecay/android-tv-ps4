@@ -2,14 +2,14 @@
 # from generate-common-build-props
 # These properties identify this partition image.
 ####################################
-ro.product.product.brand=Android-x86
-ro.product.product.device=x86_64_tablet
-ro.product.product.manufacturer=unknown
-ro.product.product.model=Generic Android-x86_64
-ro.product.product.name=lineage_x86_64_tv
+ro.product.product.brand=google
+ro.product.product.device=kirkwood
+ro.product.product.manufacturer=Google
+ro.product.product.model=Google TV Streamer
+ro.product.product.name=kirkwood
 ro.product.build.date=Sun Oct 25 21:27:49 MSK 2026
 ro.product.build.date.utc=1792952869
-ro.product.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.product.build.fingerprint=google/kirkwood/kirkwood:14/UTTK.260317.003/15205007:user/release-keys
 ro.product.build.id=BP4A.251205.006
 ro.product.build.tags=test-keys
 ro.product.build.type=userdebug
@@ -22,9 +22,9 @@ ro.product.build.version.sdk_full=36.1
 # from gen_build_prop.py:generate_build_info
 ####################################
 # begin build properties
-ro.build.fingerprint=google/fugu/fugu:8.0.0/OPR2.170623.027/4397545:user/release-keys
+ro.build.fingerprint=google/kirkwood/kirkwood:14/UTTK.260317.003/15205007:user/release-keys
 ro.build.id=BP4A.251205.006
-ro.build.display.id=BP4A.251205.006 test-keys
+ro.build.display.id=Android TV for PS4 16 v0.1
 ro.build.version.incremental=1792952869
 ro.build.version.sdk=36
 ro.build.version.sdk_full=36.1

@@ -25,7 +25,7 @@ ro.system.build.version.sdk_full=36.1
 # begin build properties
 ro.build.fingerprint=google/kirkwood/kirkwood:14/UTTK.260317.003/15205007:user/release-keys
 ro.build.id=BP4A.251205.006
-ro.build.display.id=Android TV for PS4 16 - internal dev
+ro.build.display.id=Android TV for PS4 16 v0.1
 ro.build.version.incremental=1792952869
 ro.build.version.sdk=36
 ro.build.version.sdk_full=36.1
@@ -198,11 +198,7 @@ persist.sys.nativebridge=1
 ro.build.backported_fixes.alias_bitset.long_list=18
 # end of file
 
-# Android TV for PS4 internal dev build
-persist.sys.usb.config=adb
-persist.adb.tcp.port=5555
-service.adb.tcp.port=5555
-# Dev build: log, don't enforce, missing privileged permissions (GApps gaps).
+# Log, don't enforce, missing privileged permissions (GApps gaps).
 ro.control_privapp_permissions=log
 
 # PS4: the name people see
