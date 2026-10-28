@@ -1,8 +1,6 @@
 <resources>
- <!-- The framework default names com.google.android.backdrop, which this
-      Android TV build doesn't include, so new installs had no screensaver.
-      Point it at the Backdrop screensaver the build does ship, and show it
+ <!-- Google's Backdrop screensaver, which this Android 16 build ships, shown
       instead of sleeping (Android sleep freezes PS4 Linux). -->
- <string name="config_dreamsDefaultComponent" translatable="false">com.google.android.apps.tv.dreamx/com.google.android.apps.tv.dreamx.service.Backdrop</string>
+ <string name="config_dreamsDefaultComponent" translatable="false">com.google.android.backdrop/com.google.android.backdrop.Backdrop</string>
  <bool name="config_dreamsActivatedOnSleepByDefault">true</bool>
 </resources>

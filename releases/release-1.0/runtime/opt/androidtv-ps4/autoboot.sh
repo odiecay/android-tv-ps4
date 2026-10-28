@@ -440,13 +440,18 @@ cp "$assets/system-build.prop" /android/system/build.prop
 cp "$assets/vendor-build.prop" /android/system/vendor/build.prop
 cp "$assets/init.android_x86_64.rc" /android/system/vendor/etc/init/init.android_x86_64.rc
 cp "$assets/product-build.prop" /android/system/product/etc/build.prop
+# New installs: named "PlayStation 4", never sleep (Android sleep freezes PS4
+# Linux), and show the Backdrop screensaver after 15 minutes instead.
+mkdir -p /android/system/product/overlay
+cp "$assets/AtvDeviceNameOverlay.apk" /android/system/product/overlay/AtvDeviceNameOverlay.apk
+cp "$assets/AtvScreensaverOverlay.apk" /android/system/product/overlay/AtvScreensaverOverlay.apk
+chmod 644 /android/system/product/overlay/AtvDeviceNameOverlay.apk /android/system/product/overlay/AtvScreensaverOverlay.apk
 # Android TV setup starts by asking to pair a remote. On a PS4 the controller
 # is the remote, so when a gamepad or USB keyboard is already connected, an
 # overlay makes setup start at Welcome. With nothing connected the pairing step
 # stays, since it is how a controller in pairing mode gets connected.
 # (The PS4 power button also registers as a keyboard; it is not on USB.)
 if awk '/^I:/{usb=($2=="Bus=0003")} /^H:/{if($0~/js[0-9]/||(usb&&$0~/kbd/))found=1} END{exit !found}' /proc/bus/input/devices 2>/dev/null; then
- mkdir -p /android/system/product/overlay
  cp "$assets/AtvSetupWizardOverlay.apk" /android/system/product/overlay/AtvSetupWizardOverlay.apk
  chmod 644 /android/system/product/overlay/AtvSetupWizardOverlay.apk
  stage 'Controller or keyboard connected: setup skips remote pairing'
