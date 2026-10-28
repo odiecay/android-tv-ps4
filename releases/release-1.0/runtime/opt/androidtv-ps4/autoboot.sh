@@ -285,7 +285,7 @@ stage "Hardware: storage=$userpart sdio=[${sdio% }] net=[$(ls /sys/class/net 2>/
 for device in /sys/bus/pci/devices/*; do
  [ "$(cat "$device/vendor" 2>/dev/null)" = 0x104d ] && [ "$(cat "$device/device" 2>/dev/null)" = 0x90d8 ] || continue
  stage 'Baikal Ethernet found; loading its driver'
- insmod /lib/modules/6.15.4-androidtv-ps4-aeolia/extra/psx_mts_net.ko autoarm=1 || stage 'Baikal Ethernet driver failed to load; continuing without Ethernet'
+ insmod /lib/modules/$(uname -r)/extra/psx_mts_net.ko autoarm=1 || stage 'Baikal Ethernet driver failed to load; continuing without Ethernet'
 done
 mkdir -p /mnt/ps4-user /mnt/android-share /mnt/android-sfs /mnt/android-lower /mnt/android-persistent /android
 # The user partition is AES-XTS with the EAP key. From the CUH-1200 on
@@ -331,7 +331,7 @@ mt7668=
 case " $sdio " in
  *' 0x037a:0x7608 '*)
   stage 'MediaTek MT7668 Wi-Fi found; loading its driver'
-  if tar -xzf "$installation/mt7668-wifi.tar.gz" -C / && insmod /lib/modules/6.15.4-androidtv-ps4-aeolia/extra/wlan_mt76x8_sdio.ko; then mt7668=1
+  if tar -xzf "$installation/mt7668-wifi.tar.gz" -C / && insmod /lib/modules/$(uname -r)/extra/wlan_mt76x8_sdio.ko; then mt7668=1
   else stage 'MT7668 Wi-Fi driver failed to load; continuing without Wi-Fi'; fi
   ;;
 esac
