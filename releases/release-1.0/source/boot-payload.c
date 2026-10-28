@@ -107,7 +107,12 @@ int _main(void){
  if(fd<0){out.rc=-104;goto done;}ssize_t got=read(fd,args,sizeof(args)-1);close(fd);
  if(got<=0){out.rc=-105;goto done;}
  for(ssize_t i=0;i<got;i++)if(args[i]=='\n'||args[i]=='\r')args[i]=0;
- size_t used=0;while(args[used])used++;const char tag[]=" androidtv.boot_id=" ATV_BUILD_ID;
+ size_t used=0;while(args[used])used++;
+ /* Baikal needs these; the old Baikal-only kernel had them built in. One
+  * kernel now, so they're added here, only when the southbridge is Baikal. */
+ if((sb>>16)==ATV_SB_FAMILY_BAIKAL){const char baikal[]=" pci=nocrs intremap=off";
+  if(used+sizeof(baikal)>sizeof(args)){out.rc=-108;goto done;}copybytes(args+used,baikal,sizeof(baikal));used+=sizeof(baikal)-1;}
+ const char tag[]=" androidtv.boot_id=" ATV_BUILD_ID;
  if(used+sizeof(tag)>sizeof(args)){out.rc=-108;goto done;}copybytes(args+used,tag,sizeof(tag));
  out.stage=3;save();VAR(errno,int)=0;
  FN(kexec,void(*)(void*,void*))((char*)memory+PAYLOAD_kernel_main,0);
