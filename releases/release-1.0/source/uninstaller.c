@@ -225,24 +225,30 @@ static void show_message(const char *title,const char *line1,const char *line2,c
  frame_begin(title);text(64,130,2,line1,WHITE);if(line2)text(64,170,2,line2,DIM);if(line3)text(64,210,2,line3,DIM);
  text(64,640,2,"O  Exit",WHITE);frame_end();
 }
+/* Returning from main ends in a blocked system call (SIGSYS, a crash report).
+ * Ask the system to close the app instead. */
+static void quit(void){
+ const char *args[]={NULL};sceSystemServiceLoadExec("exit",args);
+ for(;;)sceKernelUsleep(1000000);
+}
 int main(void){
  sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE);
  sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE);
  sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD);
- if(screen_init())return 1;
+ if(screen_init())quit();
  int user=-1;sceUserServiceInitialize(NULL);sceUserServiceGetInitialUser(&user);
  scePadInit();pad=scePadOpen(user,0,0,NULL);
  frame_begin("Android TV for PS4 uninstaller");text(64,130,2,"Checking what's on this console. Nothing is deleted yet.",WHITE);frame_end();
 
  ps4_as_root(load_appinst,NULL);
  int apps=appinst_init&&appinst_init()==0;
- if(ps4_as_root(scan_files,NULL)){show_message("Android TV for PS4 uninstaller","Could not get the access needed to check your storage.","Make sure GoldHEN is running, then open the uninstaller again.","Nothing was deleted.");wait_press();return 0;}
+ if(ps4_as_root(scan_files,NULL)){show_message("Android TV for PS4 uninstaller","Could not get the access needed to check your storage.","Make sure GoldHEN is running, then open the uninstaller again.","Nothing was deleted.");wait_press();quit();}
  for(int i=0;i<ITEM_COUNT;i++)if(items[i].kind==KIND_APP&&apps){int exists=0;if(appinst_exists(items[i].paths[0],&exists)==0&&exists)items[i].found=1;}
  int count=0;uint64_t total=0;for(int i=0;i<ITEM_COUNT;i++)if(items[i].found){count++;total+=items[i].bytes;}
  log_line("Scan: app utility %s",apps?"ready":"unavailable");
  for(int i=0;i<ITEM_COUNT;i++)log_line("  %s: %s, %llu bytes (%s)",items[i].label,items[i].found?"found":"not found",(unsigned long long)items[i].bytes,items[i].paths[0]);
  ps4_as_root(save_log,NULL);
- if(!count){show_message("Android TV for PS4 uninstaller","Nothing from Android TV for PS4 was found on this console.","There's nothing to remove.",NULL);wait_press();return 0;}
+ if(!count){show_message("Android TV for PS4 uninstaller","Nothing from Android TV for PS4 was found on this console.","There's nothing to remove.",NULL);wait_press();quit();}
 
  /* Screen 1: everything that will be removed, and what won't be touched. */
  char size[32],line[160];size_text(total,size,sizeof(size));
@@ -253,7 +259,7 @@ int main(void){
  text(64,560,2,"Your Android apps, logins and settings go with it.",RED);
  text(64,592,2,"Nothing else is touched: your games, saves and other apps stay.",DIM);
  text(64,648,2,"X  Continue          O  Cancel and exit",WHITE);frame_end();
- if(wait_press()!=ORBIS_PAD_BUTTON_CROSS){log_line("Cancelled on the list screen; nothing deleted");ps4_as_root(save_log,NULL);return 0;}
+ if(wait_press()!=ORBIS_PAD_BUTTON_CROSS){log_line("Cancelled on the list screen; nothing deleted");ps4_as_root(save_log,NULL);quit();}
 
  /* Screen 2: explicit permission. Holding Cross for 3 s means it can't happen by accident. */
  for(;;){
@@ -261,7 +267,7 @@ int main(void){
   double held=-1;
   for(;;){
    uint32_t b=buttons();
-   if(b&ORBIS_PAD_BUTTON_CIRCLE){log_line("Cancelled on the confirm screen; nothing deleted");ps4_as_root(save_log,NULL);return 0;}
+   if(b&ORBIS_PAD_BUTTON_CIRCLE){log_line("Cancelled on the confirm screen; nothing deleted");ps4_as_root(save_log,NULL);quit();}
    if(b&ORBIS_PAD_BUTTON_CROSS){if(held<0)held=seconds();}else held=-1;
    double progress=held<0?0:(seconds()-held)/3.0;if(progress>1)progress=1;
    frame_begin("Are you sure?");
@@ -300,5 +306,5 @@ int main(void){
  text(64,y+60,2,"You can delete this uninstaller from Settings > Storage when you're done.",DIM);
  text(64,648,2,"O  Exit",WHITE);frame_end();
  while(wait_press()!=ORBIS_PAD_BUTTON_CIRCLE);
- return 0;
+ quit();
 }

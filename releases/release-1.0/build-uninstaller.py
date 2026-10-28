@@ -19,7 +19,7 @@ subprocess.run(['ld.lld-18','-m','elf_x86_64','-pie','--script',str(sdk/'link.x'
 env=dict(os.environ,OO_PS4_TOOLCHAIN=str(sdk),DOTNET_SYSTEM_GLOBALIZATION_INVARIANT='1',LD_LIBRARY_PATH=str(a.runtime.resolve()))
 def run(args):subprocess.run([str(x) for x in args],cwd=b,env=env,check=True)
 run([tools/'create-fself','-in=uninstaller.elf','-out=uninstaller.oelf','--eboot','eboot.bin','--paid','0x3800000000000011'])
-for key,value in [('CONTENT_ID',cid),('APP_VER','1.01'),('VERSION','1.01'),('TITLE','Android TV for PS4 Uninstaller'),('TITLE_ID','ATVU00001')]:
+for key,value in [('CONTENT_ID',cid),('APP_VER','1.02'),('VERSION','1.02'),('TITLE','Android TV for PS4 Uninstaller'),('TITLE_ID','ATVU00001')]:
  run([tools/'PkgTool.Core','sfo_setentry','sce_sys/param.sfo',key,'--type','Utf8','--maxsize','48' if key=='CONTENT_ID' else '128' if key=='TITLE' else '12' if key=='TITLE_ID' else '8','--value',value])
 files=['eboot.bin','sce_sys/about/right.sprx','sce_sys/param.sfo','sce_sys/icon0.png','sce_sys/pic1.png','sce_module/libc.prx','sce_module/libSceFios2.prx']
 run([tools/'create-gp4','-out','pkg.gp4','--content-id='+cid,'--files',' '.join(files)])
