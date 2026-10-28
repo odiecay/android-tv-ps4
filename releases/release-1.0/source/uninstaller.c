@@ -18,7 +18,6 @@
 #include <orbis/Sysmodule.h>
 #include <orbis/UserService.h>
 #include <orbis/Pad.h>
-#include <orbis/AppInstUtil.h>
 #include "installer-font.h"
 extern int ps4_as_root(void(*fn)(void*),void*arg);
 
@@ -134,6 +133,16 @@ static void delete_files(void *arg){
  }
 }
 
+/* The app-install library is off limits to normal apps, and linking it directly
+ * crashes on the first call. Load it with root access and look the functions up
+ * by name; if any step fails, the app icons are left for the user to delete. */
+static int (*appinst_init)(void),(*appinst_exists)(const char*,int*),(*appinst_uninstall)(const char*);
+static void load_appinst(void *arg){
+ (void)arg;int h=(int)sceKernelLoadStartModule("/system/common/lib/libSceAppInstUtil.sprx",0,NULL,0,NULL,NULL);
+ log_line("App install library: handle 0x%x",(unsigned)h);if(h<0)return;
+ if(sceKernelDlsym(h,"sceAppInstUtilInitialize",(void**)&appinst_init)||sceKernelDlsym(h,"sceAppInstUtilAppExists",(void**)&appinst_exists)||
+    sceKernelDlsym(h,"sceAppInstUtilAppUnInstall",(void**)&appinst_uninstall)){appinst_init=NULL;log_line("App install library: functions not found");}
+}
 /* ---- Screen ---- */
 #define WIDTH 1280
 #define HEIGHT 720
@@ -220,15 +229,15 @@ int main(void){
  sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE);
  sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE);
  sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD);
- sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL);
  if(screen_init())return 1;
  int user=-1;sceUserServiceInitialize(NULL);sceUserServiceGetInitialUser(&user);
  scePadInit();pad=scePadOpen(user,0,0,NULL);
  frame_begin("Android TV for PS4 uninstaller");text(64,130,2,"Checking what's on this console. Nothing is deleted yet.",WHITE);frame_end();
 
- int apps=sceAppInstUtilInitialize()==0;
+ ps4_as_root(load_appinst,NULL);
+ int apps=appinst_init&&appinst_init()==0;
  if(ps4_as_root(scan_files,NULL)){show_message("Android TV for PS4 uninstaller","Could not get the access needed to check your storage.","Make sure GoldHEN is running, then open the uninstaller again.","Nothing was deleted.");wait_press();return 0;}
- for(int i=0;i<ITEM_COUNT;i++)if(items[i].kind==KIND_APP&&apps){int exists=0;if(sceAppInstUtilAppExists(items[i].paths[0],&exists)==0&&exists)items[i].found=1;}
+ for(int i=0;i<ITEM_COUNT;i++)if(items[i].kind==KIND_APP&&apps){int exists=0;if(appinst_exists(items[i].paths[0],&exists)==0&&exists)items[i].found=1;}
  int count=0;uint64_t total=0;for(int i=0;i<ITEM_COUNT;i++)if(items[i].found){count++;total+=items[i].bytes;}
  log_line("Scan: app utility %s",apps?"ready":"unavailable");
  for(int i=0;i<ITEM_COUNT;i++)log_line("  %s: %s, %llu bytes (%s)",items[i].label,items[i].found?"found":"not found",(unsigned long long)items[i].bytes,items[i].paths[0]);
@@ -276,7 +285,7 @@ int main(void){
    const char *mark=j<i?(items[j].failed?"Failed  ":"Done    "):j==i?"Deleting":"Waiting ";
    text(64,y,2,mark,j<i?(items[j].failed?RED:GREEN):j==i?WHITE:DIM);text(220,y,2,items[j].label,j<=i?WHITE:DIM);y+=36;}
   text(64,648,2,"Keep your PS4 switched on.",DIM);frame_end();
-  if(items[i].kind==KIND_APP){int rc=apps?sceAppInstUtilAppUnInstall(items[i].paths[0]):-1;items[i].failed=rc!=0;log_line("  uninstall %s returned 0x%x",items[i].paths[0],(unsigned)rc);}
+  if(items[i].kind==KIND_APP){int rc=apps?appinst_uninstall(items[i].paths[0]):-1;items[i].failed=rc!=0;log_line("  uninstall %s returned 0x%x",items[i].paths[0],(unsigned)rc);}
   else if(ps4_as_root(delete_files,&i))items[i].failed=1;
   log_line("  %s: %s",items[i].label,items[i].failed?"FAILED":"removed");
   ps4_as_root(save_log,NULL);
