@@ -570,8 +570,38 @@ cp "$assets/android_usb_class.ko" /run/androidtv-ps4/android_usb_class.ko
 # to its Mesa isn't ported yet, so some depth/stencil drawing may glitch.
 gpu=$(cat /sys/bus/pci/devices/*/device 2>/dev/null | grep -m1 -E '^0x992[0-4]$' || true)
 stage "GPU: ${gpu:-unknown}"
+# PS4 Pro (1002:9924) has twice the shader engines and needs a second raster
+# setting (0x2e) the base GPU doesn't; without it drawing goes wrong. Same
+# change 1.1 made for Android 13 (android16/scripts/patch-mesa26-gladius.py).
+# Each library is patched as a copy and checked before and after.
+pro_mesa() {
+ lib=$1 before=$2 after=$3; shift 3
+ tmp=/run/androidtv-ps4/mesa-pro.tmp
+ [ "$(sha256sum "$lib" | cut -d' ' -f1)" = "$before" ] || { stage "PS4 Pro graphics: ${lib##*/} is not the expected build; left unchanged"; return 0; }
+ cp "$lib" "$tmp" || return 0
+ while [ $# -ge 2 ]; do
+  printf "$2" | dd of="$tmp" bs=1 seek="$1" conv=notrunc 2>/dev/null
+  shift 2
+ done
+ if [ "$(sha256sum "$tmp" | cut -d' ' -f1)" = "$after" ]; then
+  cp "$tmp" "$lib" && stage "PS4 Pro graphics: raster setup applied to ${lib#/android}"
+ else
+  stage "PS4 Pro graphics: patch check failed for ${lib##*/}; left unchanged"
+ fi
+ rm -f "$tmp"
+}
+if [ "$gpu" = 0x9924 ]; then
+ pro_mesa /android/system/vendor/lib64/libgallium_dri.so \
+  e0f6d5ed75e831f403e01416bbfe4b27478c76f7deddcc913ef8b78bc64287bb \
+  9558429e4d21b1fe5df7901e6c4ec775354b075ebe3f8da19fe521a2436424f5 \
+  9759504 '\303\067\003\001' 26747583 '\052'
+ pro_mesa /android/system/vendor/lib/libgallium_dri.so \
+  f72b051a9653f471dccfb69c2a7bec8fb4345dd469255eb5079fe57ab889bf57 \
+  c293030ca736454aa5118d2eca25df669679088ac4031306df87bc046c790945 \
+  9147344 '\253\330\024\377' 27310479 '\052'
+fi
 sh "$assets/controller-home.sh"
-stage 'Launching Android 16 init (internal dev)'
+stage 'Launching Android'
 set -eu
 chmod 755 /run/androidtv-ps4/android-child.sh /run/androidtv-ps4/binder-devices
 if ! grep -q '^xt_quota2 ' /proc/modules; then
