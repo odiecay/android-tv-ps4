@@ -51,7 +51,7 @@ static int commit_file(const char *from,const char *to){
  return rename(from,to);
 }
 #include <bundled-apps.h>
-#define BASE_ASSET_COUNT 11
+#define BASE_ASSET_COUNT 10
 #define ASSET_COUNT (BASE_ASSET_COUNT+BUNDLED_APP_COUNT)
 static int files[ASSET_COUNT];
 #ifdef RAW_IMAGES
@@ -65,10 +65,10 @@ static int files[ASSET_COUNT];
 #define SYSTEM_OPERATION "Extracting the bundled Android system image"
 #define DATA_OPERATION "Extracting your preformatted data.img from its supplied ZIP"
 #endif
-static const char *names[BASE_ASSET_COUNT]={DATA_ASSET,"bzImage","initramfs.cpio.xz","bootargs.txt","vram.txt","linux.elf",SYSTEM_ASSET,"libgallium-baseline.so","ndk-translation.tar.gz","bzImage-baikal","mt7668-wifi.tar.gz"};
+static const char *names[BASE_ASSET_COUNT]={DATA_ASSET,"bzImage","initramfs.cpio.xz","bootargs.txt","vram.txt","linux.elf",SYSTEM_ASSET,"libgallium-baseline.so","ndk-translation.tar.gz","mt7668-wifi.tar.gz"};
 /* Boot files copied to BOOT_ROOT: both kernels, the shared initramfs and the
  * boot arguments. The payload picks the kernel for the console's southbridge. */
-static const int boot_assets[]={1,2,3,4,9};
+static const int boot_assets[]={1,2,3,4};
 static void notice(const char *s){char log[320];snprintf(log,sizeof(log),"[PS4ATV] %s\n",s);sceKernelDebugOutText(0,log);installer_ui_status(s);}
 static void failure(const char *s){int saved=errno;char message[256];snprintf(message,sizeof(message),"%s (errno %d)",s,saved);notice(message);
  installer_ui_failed("Setup stopped. Your Android data is kept. See the message above, or report it with the files in logs.");}
@@ -148,8 +148,8 @@ static int install_translation(void){
 static int install_wifi(void){
  const char *target=ROOT "/mt7668-wifi.tar.gz";
  const char *stage=ROOT "/mt7668-wifi.tar.gz.part";
- if(file_equal(files[10],target))return 0;
- if(copy_file(files[10],stage)||rename(stage,target)||sync_directory(ROOT))return -1;
+ if(file_equal(files[9],target))return 0;
+ if(copy_file(files[9],stage)||rename(stage,target)||sync_directory(ROOT))return -1;
  remember_verified(target);
  return 0;
 }

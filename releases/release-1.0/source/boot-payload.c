@@ -89,7 +89,6 @@ int _main(void){
  if(save()){out.rc=-114;goto done;}
  /* The small foreground app has already released its file-backed artwork.
   * Prepare Linux now; ARM still requires an explicit display release below. */
- if((sb>>16)==ATV_SB_FAMILY_BAIKAL){kernel_path=ATV_BOOT_DIR "/bzImage-baikal";kernel_bytes=ATV_KERNEL_BAIKAL_BYTES;kernel_crc=ATV_KERNEL_BAIKAL_CRC32;}
 #ifdef ATV_DEV_KERNEL_OVERRIDE
  /* Dev builds only: a kernel copied in as bzImage-dev boots without a PKG
   * rebuild. Its size and checksum come from the file, so the loader's staging

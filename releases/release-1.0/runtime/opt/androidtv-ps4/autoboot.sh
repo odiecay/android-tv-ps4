@@ -24,14 +24,25 @@ hardware_report() {
   esac
   handover=$(grep -E 'handed to Android|could not be handed|No Wi-Fi interface' /run/androidtv-ps4/progress.log 2>/dev/null | tail -1 | sed 's/^\[[^]]*\] //')
   echo "Wi-Fi handed to Android: ${handover:-not yet (Android hadn't started when this was written)}"
-  # Only the Baikal kernel registers the baikal_pcie driver.
-  if [ -d /sys/bus/pci/drivers/baikal_pcie ]; then echo "Kernel image: bzImage-baikal (Baikal kernel)"
-  else echo "Kernel image: bzImage (standard kernel)"; fi
   echo "Kernel: $(cat /proc/version)"
   echo "Command line: $(cat /proc/cmdline)"
   echo "CPU: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2-)"
   grep -E 'MemTotal|MemAvailable' /proc/meminfo
   echo "Storage partition: ${userpart:-not found}"
+  # Which controller the drive came through: SATA (Belize, Baikal) or the
+  # USB-SATA bridge (Aeolia fats). Shown even when no drive appeared.
+  if [ -n "${userpart:-}" ]; then
+   drive=$(readlink -f "/sys/block/$(basename "$userpart" | sed 's/[0-9]*$//')" 2>/dev/null)
+   case "$drive" in */ata*) bus=SATA;; */usb*) bus=USB;; *) bus=unknown;; esac
+   echo "Drive path: $bus via $(echo "$drive" | grep -o '0000:00:14\.[0-7]' | head -1)"
+  fi
+  echo "Storage and USB controllers (PCI function, ID, driver):"
+  for d in /sys/bus/pci/devices/*; do
+   [ "$(cat "$d/vendor" 2>/dev/null)" = 0x104d ] || continue
+   case "$(cat "$d/device" 2>/dev/null)" in 0x909f|0x90a4|0x90ca|0x90cf|0x90d9|0x90de) ;; *) continue;; esac
+   drv=$(basename "$(readlink "$d/driver" 2>/dev/null)" 2>/dev/null)
+   echo " ${d##*/} $(cat "$d/device") ${drv:-no driver}"
+  done
   echo; echo "PCI devices (vendor:device class driver):"
   for d in /sys/bus/pci/devices/*; do
    drv=$(basename "$(readlink "$d/driver" 2>/dev/null)" 2>/dev/null)
@@ -256,6 +267,17 @@ internal_disk() {
  done
  return 1
 }
+# Name the southbridge from its PCI ID (driver names say "aeolia" on every
+# model). Done before the disk wait, so a console whose drive never appears
+# still reports it.
+southbridge=unknown
+for device in /sys/bus/pci/devices/*; do
+ [ "$(cat "$device/vendor" 2>/dev/null)" = 0x104d ] || continue
+ case "$(cat "$device/device" 2>/dev/null)" in
+  0x908f) southbridge=aeolia;; 0x90c8) southbridge=belize;; 0x90d7) southbridge=baikal;;
+ esac
+done
+stage "Southbridge: $southbridge"
 stage 'Waiting for internal PS4 disk'
 userpart=
 for attempt in $(seq 1 60); do
@@ -267,16 +289,6 @@ done
 [ -n "$userpart" ] || { stage 'Internal disk did not appear within 60 seconds'; exit 1; }
 stage 'Opening internal PS4 storage (disk encryption and filesystem)'
 [ -r /key/eap_hdd_key.bin ]
-# Name the southbridge from its PCI ID. Driver names say "aeolia" on every
-# model, so dmesg can't tell them apart.
-southbridge=unknown
-for device in /sys/bus/pci/devices/*; do
- [ "$(cat "$device/vendor" 2>/dev/null)" = 0x104d ] || continue
- case "$(cat "$device/device" 2>/dev/null)" in
-  0x908f) southbridge=aeolia;; 0x90c8) southbridge=belize;; 0x90d7) southbridge=baikal;;
- esac
-done
-stage "Southbridge: $southbridge"
 # One line describing this console's hardware, for test reports.
 sdio=$(for d in /sys/bus/sdio/devices/*; do [ -r "$d/vendor" ] && printf '%s:%s ' "$(cat "$d/vendor")" "$(cat "$d/device")"; done 2>/dev/null || true)
 stage "Hardware: storage=$userpart sdio=[${sdio% }] net=[$(ls /sys/class/net 2>/dev/null | tr '\n' ' ' | sed 's/ $//')]"

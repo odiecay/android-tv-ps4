@@ -17,7 +17,7 @@ assert digest(a.assets/'libgallium-baseline.so')==runtime_inputs['mesa_sha256']
 assert digest(a.assets/'mt7668-wifi.tar.gz')==runtime_inputs['mt7668_wifi_sha256']
 assert digest(a.assets/'bundled-apps.sfs')==app_image['sha256']
 assert (a.assets/'bundled-apps.sfs').stat().st_size==app_image['bytes']==runtime_inputs['bundled_app_bytes']
-expected_assets={'data-gib.txt','bzImage','bzImage-baikal','mt7668-wifi.tar.gz','initramfs.cpio.xz','bootargs.txt','vram.txt','linux.elf','system.sfs','libgallium-baseline.so','ndk-translation.tar.gz','bundled-apps.sfs'}
+expected_assets={'data-gib.txt','bzImage','mt7668-wifi.tar.gz','initramfs.cpio.xz','bootargs.txt','vram.txt','linux.elf','system.sfs','libgallium-baseline.so','ndk-translation.tar.gz','bundled-apps.sfs'}
 assert {x.name for x in a.assets.iterdir()}==expected_assets,'Unexpected package assets'
 metadata_hashes={name:digest(root/name) for name in ['image-metadata.h','bundled-apps.h','bundled-apps.json','bundled-apps-image.json','runtime-inputs.json']}
 assert (a.assets/'data-gib.txt').read_text()=='32\n'
@@ -33,8 +33,8 @@ subprocess.run(['python3',str(root/'embed-payload.py'),str(a.assets/'linux.elf')
 subprocess.run(['python3',str(root/'build-kexec.py'),str(b)],check=True)
 import zlib
 boot_inputs=[]
-# bzImage-baikal is the kernel the payload selects on Baikal southbridges.
-for prefix,name in [('KERNEL','bzImage'),('KERNEL_BAIKAL','bzImage-baikal'),('INITRD','initramfs.cpio.xz')]:
+# One kernel for every southbridge.
+for prefix,name in [('KERNEL','bzImage'),('INITRD','initramfs.cpio.xz')]:
  data=(a.assets/name).read_bytes()
  boot_inputs += [f'#define ATV_{prefix}_BYTES {len(data)}ULL',f'#define ATV_{prefix}_CRC32 0x{zlib.crc32(data):08x}U']
 # One ID for the whole asset set. The launcher trusts a file it verified earlier
