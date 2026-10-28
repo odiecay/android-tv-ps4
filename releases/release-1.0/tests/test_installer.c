@@ -23,7 +23,7 @@ int main(void){
  assert(!install_graphics());assert(!install_graphics());expect(ROOT "/libgallium-baseline.so","package-bytes");
  put(ROOT "/libgallium-baseline.so","prior-graphics");assert(!install_graphics());expect(ROOT "/libgallium-baseline.so.before-release-100","prior-graphics");
  assert(!install_graphics());put(ROOT "/libgallium-baseline.so","foreign-graphics");assert(install_graphics()!=0);expect(ROOT "/libgallium-baseline.so","foreign-graphics");
- assert(!install_boot());assert(!install_boot());expect(BOOT_ROOT "/bzImage","package-bytes");expect(BOOT_ROOT "/bzImage-baikal","package-bytes");
+ assert(!install_boot());assert(!install_boot());expect(BOOT_ROOT "/bzImage","package-bytes");
  put(BOOT_ROOT "/bzImage","prior-kernel");put(BOOT_ROOT "/bzImage.ps4android-next","package-");assert(!install_boot());expect(BOOT_ROOT "/bzImage.before-sparse-v015","prior-kernel");assert(!install_boot());
  /* A second update replaces the previous update's backup instead of failing with EEXIST. */
  put(BOOT_ROOT "/bzImage","second-kernel");assert(!install_boot());expect(BOOT_ROOT "/bzImage.before-sparse-v015","second-kernel");

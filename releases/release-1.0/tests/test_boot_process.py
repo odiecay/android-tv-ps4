@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory() as tmp:
     (d/'assets').mkdir();(d/'install').mkdir()
     (d/'install/ready').write_text('PS4ANDROID13-SPARSE-V015\nedition=32\n')
     (d/'install/system.sfs').write_text('package-bytes')
-    for n in ['data-gib.txt','bzImage','bzImage-baikal','initramfs.cpio.xz','bootargs.txt','vram.txt','linux.elf','system.sfs','libgallium-baseline.so','ndk-translation.tar.gz','app-youtube-base.apk','app-spotify-base.apk','app-spotify-x86_64.apk']:
+    for n in ['data-gib.txt','bzImage','initramfs.cpio.xz','bootargs.txt','vram.txt','linux.elf','system.sfs','libgallium-baseline.so','ndk-translation.tar.gz','app-youtube-base.apk','app-spotify-base.apk','app-spotify-x86_64.apk']:
         (d/'assets'/n).write_text('32\n' if n=='data-gib.txt' else 'package-bytes')
     (d/'test.c').write_text(r'''
 #define main installer_entry
