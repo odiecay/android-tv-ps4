@@ -356,6 +356,16 @@ keep_logs() {
   # Big full logs to the stick every 6th cycle (30 s); the rest every cycle.
   usb_cycle=$(( ${usb_cycle:-0} + 1 ))
   if [ $((usb_cycle % 6)) -eq 0 ]; then usb_mirror || true; else USB_LIGHT=1 usb_mirror || true; fi
+  # The logs are for getting Android started. Once it has, save them one last
+  # time and stop: nothing more is written to the drive or a USB stick, and
+  # nothing of what people do in Android is recorded.
+  if [ -n "$child" ] && [ "$(timeout 5 nsenter -t "$child" -m -p /system/bin/getprop sys.boot_completed 2>/dev/null)" = 1 ]; then
+   stage 'Android started; logs saved, logging stopped'
+   hardware_report
+   copy_logs "$installation/logs"
+   usb_mirror || true
+   break
+  fi
  done
  # Android stopped or a restart was asked for: one last copy, with the kernel
  # log that says why, to the logs folder and to a USB stick if one is in.
