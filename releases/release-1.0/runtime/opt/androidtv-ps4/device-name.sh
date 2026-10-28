@@ -55,4 +55,13 @@ if [ "$(getprop persist.vendor.androidtv.keyboard)" != 1 ] && ime list -s -a | g
         setprop persist.vendor.androidtv.keyboard 1 || note "could not record that the keyboard was set"
     fi
 fi
+# Developer options and USB debugging on from the start, so nobody has to tap
+# Build number. The PS4 has no USB device port, so USB debugging can't be
+# reached from outside; ADB over the network stays off until turned on in
+# Developer options. Set once; turning them off later is kept.
+if [ "$(getprop persist.vendor.androidtv.devoptions)" != 1 ]; then
+    if ensure global development_settings_enabled 1 && ensure global adb_enabled 1; then
+        setprop persist.vendor.androidtv.devoptions 1 || note "could not record that developer options were set"
+    fi
+fi
 note "done"
