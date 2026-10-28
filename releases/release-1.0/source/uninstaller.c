@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -20,6 +21,21 @@
 #include <orbis/AppInstUtil.h>
 #include "installer-font.h"
 extern int ps4_as_root(void(*fn)(void*),void*arg);
+
+/* Every step goes to the kernel log (readable over GoldHEN's klog port) and to
+ * /data/atv-uninstaller.log, which this tool never deletes. */
+static char log_text[16384];static size_t log_used;
+static void log_line(const char *fmt,...) __attribute__((format(printf,1,2)));
+static void log_line(const char *fmt,...){
+ char line[512];va_list ap;va_start(ap,fmt);int n=vsnprintf(line,sizeof(line)-1,fmt,ap);va_end(ap);
+ if(n<0)return;if(n>(int)sizeof(line)-2)n=sizeof(line)-2;line[n]='\n';line[n+1]=0;
+ char k[540];snprintf(k,sizeof(k),"[ATV uninstaller] %s",line);sceKernelDebugOutText(0,k);
+ if(log_used+n+1<sizeof(log_text)){memcpy(log_text+log_used,line,n+1);log_used+=n+1;}
+}
+static void save_log(void *arg){
+ (void)arg;int fd=open("/data/atv-uninstaller.log",O_WRONLY|O_CREAT|O_APPEND|O_NOFOLLOW,0644);
+ if(fd<0)return;ssize_t w=write(fd,log_text,log_used);(void)w;fsync(fd);close(fd);log_used=0;
+}
 
 /* ---- What we remove. Paths are fixed; nothing is built from user input. ---- */
 enum kind {KIND_DIR,KIND_FILES,KIND_LINUX_BOOT,KIND_APP};
@@ -63,15 +79,15 @@ static int walk(const char *path,int remove,uint64_t *bytes){
    struct stat st;
    if(path_stat(child,&st)){
     /* Not openable without following: a symlink (or unreadable). Remove the entry itself only. */
-    if(remove&&unlink(child))failures++;
+    if(remove&&unlink(child)){failures++;log_line("  could not remove %s (errno %d)",child,errno);}
     continue;
    }
    if(S_ISDIR(st.st_mode)){
     failures+=walk(child,remove,bytes);
-    if(remove&&rmdir(child))failures++;
+    if(remove&&rmdir(child)){failures++;log_line("  could not remove folder %s (errno %d)",child,errno);}
    }else{
     if(bytes)*bytes+=(uint64_t)st.st_blocks*512;
-    if(remove&&unlink(child))failures++;
+    if(remove&&unlink(child)){failures++;log_line("  could not remove %s (errno %d)",child,errno);}
    }
   }
  }
@@ -214,6 +230,9 @@ int main(void){
  if(ps4_as_root(scan_files,NULL)){show_message("Android TV for PS4 uninstaller","Could not get the access needed to check your storage.","Make sure GoldHEN is running, then open the uninstaller again.","Nothing was deleted.");wait_press();return 0;}
  for(int i=0;i<ITEM_COUNT;i++)if(items[i].kind==KIND_APP&&apps){int exists=0;if(sceAppInstUtilAppExists(items[i].paths[0],&exists)==0&&exists)items[i].found=1;}
  int count=0;uint64_t total=0;for(int i=0;i<ITEM_COUNT;i++)if(items[i].found){count++;total+=items[i].bytes;}
+ log_line("Scan: app utility %s",apps?"ready":"unavailable");
+ for(int i=0;i<ITEM_COUNT;i++)log_line("  %s: %s, %llu bytes (%s)",items[i].label,items[i].found?"found":"not found",(unsigned long long)items[i].bytes,items[i].paths[0]);
+ ps4_as_root(save_log,NULL);
  if(!count){show_message("Android TV for PS4 uninstaller","Nothing from Android TV for PS4 was found on this console.","There's nothing to remove.",NULL);wait_press();return 0;}
 
  /* Screen 1: everything that will be removed, and what won't be touched. */
@@ -225,7 +244,7 @@ int main(void){
  text(64,560,2,"Your Android apps, logins and settings go with it.",RED);
  text(64,592,2,"Nothing else is touched: your games, saves and other apps stay.",DIM);
  text(64,648,2,"X  Continue          O  Cancel and exit",WHITE);frame_end();
- if(wait_press()!=ORBIS_PAD_BUTTON_CROSS)return 0;
+ if(wait_press()!=ORBIS_PAD_BUTTON_CROSS){log_line("Cancelled on the list screen; nothing deleted");ps4_as_root(save_log,NULL);return 0;}
 
  /* Screen 2: explicit permission. Holding Cross for 3 s means it can't happen by accident. */
  for(;;){
@@ -233,7 +252,7 @@ int main(void){
   double held=-1;
   for(;;){
    uint32_t b=buttons();
-   if(b&ORBIS_PAD_BUTTON_CIRCLE)return 0;
+   if(b&ORBIS_PAD_BUTTON_CIRCLE){log_line("Cancelled on the confirm screen; nothing deleted");ps4_as_root(save_log,NULL);return 0;}
    if(b&ORBIS_PAD_BUTTON_CROSS){if(held<0)held=seconds();}else held=-1;
    double progress=held<0?0:(seconds()-held)/3.0;if(progress>1)progress=1;
    frame_begin("Are you sure?");
@@ -248,6 +267,7 @@ int main(void){
   break;
  }
 
+ log_line("Confirmed (held X 3 s); deleting");
  /* Screen 3: delete, item by item, showing each as it goes. */
  for(int i=0;i<ITEM_COUNT;i++){
   if(!items[i].found)continue;
@@ -256,10 +276,13 @@ int main(void){
    const char *mark=j<i?(items[j].failed?"Failed  ":"Done    "):j==i?"Deleting":"Waiting ";
    text(64,y,2,mark,j<i?(items[j].failed?RED:GREEN):j==i?WHITE:DIM);text(220,y,2,items[j].label,j<=i?WHITE:DIM);y+=36;}
   text(64,648,2,"Keep your PS4 switched on.",DIM);frame_end();
-  if(items[i].kind==KIND_APP)items[i].failed=!apps||sceAppInstUtilAppUnInstall(items[i].paths[0])!=0;
+  if(items[i].kind==KIND_APP){int rc=apps?sceAppInstUtilAppUnInstall(items[i].paths[0]):-1;items[i].failed=rc!=0;log_line("  uninstall %s returned 0x%x",items[i].paths[0],(unsigned)rc);}
   else if(ps4_as_root(delete_files,&i))items[i].failed=1;
+  log_line("  %s: %s",items[i].label,items[i].failed?"FAILED":"removed");
+  ps4_as_root(save_log,NULL);
  }
  int failures=0;for(int i=0;i<ITEM_COUNT;i++)if(items[i].found&&items[i].failed)failures++;
+ log_line("Finished: %d failed",failures);ps4_as_root(save_log,NULL);
  frame_begin(failures?"Finished with problems":"Done");y=130;
  for(int j=0;j<ITEM_COUNT;j++){if(!items[j].found)continue;
   text(64,y,2,items[j].failed?"Failed  ":"Removed ",items[j].failed?RED:GREEN);text(220,y,2,items[j].label,WHITE);y+=36;}
