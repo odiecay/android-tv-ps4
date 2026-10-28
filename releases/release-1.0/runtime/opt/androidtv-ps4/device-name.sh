@@ -64,4 +64,20 @@ if [ "$(getprop persist.vendor.androidtv.devoptions)" != 1 ]; then
         setprop persist.vendor.androidtv.devoptions 1 || note "could not record that developer options were set"
     fi
 fi
+# Android TV setup turns Bluetooth on in its remote-pairing step. That step is
+# skipped when a controller is already connected, so turn it on here, once.
+if [ "$(getprop persist.vendor.androidtv.bluetooth)" != 1 ]; then
+    attempt=1
+    until [ "$(settings get global bluetooth_on)" = 1 ] || [ "$attempt" -gt 60 ]; do
+        cmd bluetooth_manager enable >/dev/null 2>&1
+        attempt=$((attempt + 1))
+        sleep 5
+    done
+    if [ "$(settings get global bluetooth_on)" = 1 ]; then
+        note "bluetooth on"
+        setprop persist.vendor.androidtv.bluetooth 1 || note "could not record that Bluetooth was turned on"
+    else
+        note "bluetooth: could not turn on"
+    fi
+fi
 note "done"
