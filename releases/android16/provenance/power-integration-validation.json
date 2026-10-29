@@ -1,0 +1,28 @@
+{
+  "checked_at": "2026-10-29",
+  "scope": "Default v0.1 source build, with integrated Gboard cleanup for restart and power-off",
+  "original_pkg_sha256": "7a930b70d4eef5c9c3e48db7e18db5e803a43d190b4176bb41120da7d7a1ad2f",
+  "rebuilt_pkg_sha256": "1ff1d5d43a198dc1bbaf08958c161758a15acf429fd6daf2f6236eab16720f95",
+  "rebuilt_pkg_bytes": 3166371840,
+  "package_validation": "passed",
+  "changed_assets": [
+    "initramfs.cpio.xz"
+  ],
+  "changed_initramfs_files": [
+    "usr/sbin/android-supervisor"
+  ],
+  "removed_initramfs_files": [],
+  "packaged_supervisor_matches_fresh_compilation": true,
+  "supervisor_sha256": "9b386c2511cde5635c42c4a4e83f51e9a6807ac1408d0105dec0054e3f277670",
+  "supervisor_source_sha256": "b1415f40dccb672d1a614572f5eb8c7ca30d3cd24edbdd1bbec86616d00e8964",
+  "initramfs_sha256": "52ebbf7260bacbebeee3ca167db17c555d400b2dd3859567fa57ccf852ee995c",
+  "host_power_cleanup_test": "passed: restart, poweroff, missing Gboard, busy Gboard/app/root mounts, malformed app list and crash handling",
+  "console_tested": false,
+  "original_download_replaced": false,
+  "notes": [
+    "The default build compiles the current supervisor and repacks the runtime before building the PKG.",
+    "The Gboard host bind is removed before the Android overlay and backing filesystems. Failed cleanup still prevents the console power operation.",
+    "This corrects a cleanup omission; it does not establish that every hardware restart hang is resolved.",
+    "Only the supervisor contents changed inside the initramfs; its other files and the original external assets were preserved."
+  ]
+}

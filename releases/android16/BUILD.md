@@ -55,7 +55,7 @@ The helper template initially uses the historical title; `build-release.py`
 sets the actual Android 16 identity: `ATVX16001`, application `0.10`, content ID
 `IV0000-ATVX16001_00-PS4ANDROIDTV1600`.
 
-## 3. Build the launcher and PKG
+## 3. Build the runtime, launcher and PKG
 
 ```sh
 sh releases/android16/build.sh \
@@ -69,6 +69,17 @@ sh releases/android16/build.sh \
   --build build/package --output build/dist
 ```
 
+This entry point verifies the original binary assets, recovers their additions,
+compiles the current power supervisor and repacks the runtime in an isolated
+build directory before building the launcher and PKG. Your edits to the native
+source, runtime scripts and power supervisor are included. The checkout and
+original input assets are preserved. Use fresh build/output directories each time.
+
+The integrated Gboard unmount correction handles restart and power-off cleanup;
+it needs no optional module or separate install. It has passed host tests but
+has not been tested on console hardware. This build intentionally differs from
+the original download. Its exact shipped baseline is commit `f742b3f`.
+
 Outputs: `Android-TV-for-PS4.pkg`, `release.json`, `SHA256SUMS`, `validation.txt`.
 The generic output filename is retained by the builder. The released download
 was named `Android-TV-for-PS4-16-v0.1.pkg`.
@@ -81,6 +92,10 @@ Different compilers, library versions or timestamps can change rebuilt hashes.
 Do not claim a new package has passed hardware testing just because it builds.
 
 ## 4. Change the runtime scripts
+
+For ordinary script or supervisor edits, edit the source and rerun step 3 with
+fresh build/output directories. The remaining commands are the advanced path
+for also replacing additions, kernel modules or other packaged inputs.
 
 Recover the exact additions (modules, firmware, overlays and helper binaries)
 from the verified package. This does not require an unpublished base initramfs.
@@ -102,7 +117,8 @@ python3 releases/release-1.0/export-runtime-source.py \
   --initramfs build/edited-assets/initramfs.cpio.xz
 ```
 
-Build with `--assets build/edited-assets` and fresh build/output directories.
+Build with `--prepared-assets --assets build/edited-assets` and fresh build/output
+directories. This skips automatic repacking because you already performed it.
 The repacker updates `runtime-inputs.json`; commit the edited text and generated
 manifests together. `verify-release.py` is for checking the untouched v0.1
 baseline and will intentionally report differences after your edits.
@@ -195,9 +211,12 @@ Host tests live in `../release-1.0/tests/` and do not operate a console. In the
 source-publication check, seven passed. Three inherited fixtures stopped before
 running: `test_boot_process.py` and `test_installer.py` lack the generated
 `boot-inputs.h`; `test_sender_stage.py` lacks the `installer_ui_boot_error` stub.
-The full production build succeeded and passed PKG validation; the rebuilt
-launcher and boot payload binaries match the original build byte for byte.
-The complete PKG hash differs. See [the verification record](provenance/source-validation.json).
+The baseline package build passed PKG validation, and its launcher and boot
+payload binaries matched the original build byte for byte (the complete PKG
+hash differed). See [the baseline verification record](provenance/source-validation.json).
+The integrated power update has its own
+[verification record](provenance/power-integration-validation.json); its runtime
+and dependent boot-input checksums intentionally differ from the original.
 No new console test or full Android/kernel rebuild was performed during source
 publication. Always attach the new PKG hash and exact console/firmware when
 reporting hardware results.

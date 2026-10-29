@@ -1,7 +1,8 @@
 # Android TV for PS4 16 v0.1 source
 
-This is the source for the experimental Android 16 package released on 28 October
-2026: `Android-TV-for-PS4-16-v0.1.pkg`, **3,166,371,840 bytes**, SHA256
+This is the port source for Android 16 v0.1, including a power/restart cleanup
+correction in the default build. The original package released on 28 October
+2026 is: `Android-TV-for-PS4-16-v0.1.pkg`, **3,166,371,840 bytes**, SHA256
 `7a930b70d4eef5c9c3e48db7e18db5e803a43d190b4176bb41120da7d7a1ad2f`.
 
 - [Download the released PKG](https://www.mediafire.com/file/iau0yaa395r71lo/Android-TV-for-PS4-16-v0.1.pkg/file)
@@ -27,7 +28,8 @@ python3 releases/android16/scripts/verify-release.py
 | --- | --- |
 | Native installer, UI, uninstaller | [`../release-1.0/source/`](../release-1.0/source/) |
 | GoldHEN payload and kernel handoff | `../release-1.0/source/boot-payload.c`, [`../release-1.0/loader-source/`](../release-1.0/loader-source/) |
-| Exact packaged startup scripts | [`../release-1.0/runtime/`](../release-1.0/runtime/) |
+| Startup scripts | [`../release-1.0/runtime/`](../release-1.0/runtime/) |
+| Restart and power-off supervisor | `../release-1.0/power/android-supervisor.c` (compiled by the normal build) |
 | Linux 7.2.11 PS4/Android changes | [`kernel/`](kernel/), including all 31 patches and the released config |
 | Complete Linux source tree | `linux-7.2.11-androidtv-ps4-v0.1.tar.xz` on the source release |
 | Out-of-tree kernel modules | [`kernel/modules/`](kernel/modules/) |
@@ -43,8 +45,17 @@ binaries are external inputs; this is not a complete Android platform source
 checkout. You can recover the exact runtime inputs from the verified released
 PKG to build launcher/runtime changes without finding an older private build.
 
-The snapshot intentionally contains the runtime shipped in v0.1. The later USB
-filesystem-filter change is not part of that package and is not included here.
+The default build recompiles the power supervisor and packages it automatically.
+It releases the Gboard bind mount before unmounting Android, addressing a cleanup
+omission that can block both restart and power-off. No Magisk module or separate
+installation is needed. The cleanup test covers both actions; this change has
+not yet been verified on a console and does not establish that every restart
+hang is fixed.
+
+The original PKG download is unchanged. For its exact source/runtime baseline,
+use commit `f742b3f` (the parent of the integrated source update). A build from
+the current v0.1 source intentionally has a different initramfs and PKG hash.
+The later USB filesystem-filter edit is not included.
 
 ## Help improve it
 

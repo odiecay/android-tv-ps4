@@ -18,16 +18,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pkg', type=Path)
     parser.add_argument('--assets', type=Path)
+    parser.add_argument('--inputs-only', action='store_true',
+                        help='Verify PKG/assets while allowing source edits')
     args = parser.parse_args()
+    if args.inputs_only and not (args.pkg or args.assets):
+        parser.error('--inputs-only requires --pkg or --assets')
     recorded = json.loads((ROOT / 'provenance/release-build.json').read_text())
     runtime = json.loads((RELEASE / 'runtime/manifest.json').read_text())
     checks = []
-    for prefix, hashes in [
+    source_checks = [
         (RELEASE / 'source', recorded['source_sha256']),
         (RELEASE / 'loader-source', recorded['loader_build']['source_sha256']),
         (RELEASE, recorded['metadata_sha256']),
         (RELEASE / 'runtime', runtime['text_files']),
-    ]:
+    ]
+    for prefix, hashes in ([] if args.inputs_only else source_checks):
         checks.extend((prefix / name, sha) for name, sha in hashes.items())
     if args.pkg:
         if args.pkg.stat().st_size != recorded['bytes']:

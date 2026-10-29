@@ -82,6 +82,13 @@ static int perform_power(const char *action){
  /* These binds were created in the host before Android's mount namespace.
   * They survive Android init exiting and must be released before both the
   * system overlay and the app SquashFS, which also pins the PS4 filesystem. */
+ /* Android 16 binds Gboard from the read-only system image into the host
+  * overlay before cloning Android's mount namespace. Android exiting does
+  * not remove that host-side bind: leaving it mounted makes /android busy
+  * and also pins /mnt/android-lower. Release it before either filesystem.
+  * Missing Gboard (or an already removed bind) is handled by unmount_path.
+  * Never force/lazy-unmount or reboot past a failed storage cleanup. */
+ if(unmount_path("/android/system/product/app/Gboard/Gboard.apk"))return 1;
  if(unmount_bundled_apps())return 1;
  const char *mounts[]={"/mnt/android-persistent","/android","/mnt/android-bundled-apps","/mnt/android-lower","/mnt/android-sfs","/mnt/android-share","/mnt/ps4-user"};
  for(size_t i=0;i<sizeof(mounts)/sizeof(mounts[0]);i++){

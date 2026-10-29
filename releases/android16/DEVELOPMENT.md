@@ -29,6 +29,7 @@
 | minigbm YUV mapping | Video buffers needed 512-byte luma stride and a CPU mapping covering the whole allocation. See `patch-minigbm-yuv.py`. |
 | CPU video limits | Advertising higher resolutions made apps choose streams that the CPU could not decode in real time. See `ps4-image-edits.py`. |
 | Gboard as a system app | Installing it later left setup without the expected keyboard. The runtime mounts the base APK and matching density split before package scanning. |
+| Restart/power-off cleanup | The Gboard host bind survives Android namespace exit. The supervisor now unmounts it before the Android overlay and backing storage. `build.sh` compiles this into the runtime automatically; no Magisk layer is needed. |
 | Controller/wake handling | Circle key-down/key-up handling produced duplicate Back actions; `ps-button.c` sends one Back on release and a wake event. |
 | Colors screensaver | Backdrop failed to keep the display awake in testing. Colors does not require an account or network. |
 | Logging stops after boot | Avoids continuous disk/USB writes and recording normal Android usage. |

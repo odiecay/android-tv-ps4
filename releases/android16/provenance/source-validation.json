@@ -88,7 +88,9 @@
   "notes": [
     "The new PKG was built for source verification only; it is not replacing the original download.",
     "The rebuilt launcher.elf, eboot.bin and boot-payload.elf match the original build byte for byte. The complete PKG hash differs.",
-    "No power-off/restart/HDMI fix is added by this source publication.",
+    "This baseline check precedes the power/restart cleanup correction; see power-integration-validation.json for the default v0.1 build.",
     "Unreleased USB filesystem-filter edits remain outside this snapshot."
-  ]
+  ],
+  "scope": "Original released-package baseline, before the integrated power cleanup correction",
+  "baseline_commit": "f742b3fbef3c6aa291ee45ac3fab6115cdfbff74"
 }

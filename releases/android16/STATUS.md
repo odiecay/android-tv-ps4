@@ -5,6 +5,16 @@ This describes the released PKG with SHA256
 Android 16 / LineageOS 23.2, Linux `7.2.11-androidtv-ps4-a16+`, title `ATVX16001`,
 application version `0.10`, persistent Android data size 32 GiB.
 
+## Source update included in v0.1
+
+The published v0.1 source adds the missing Gboard bind-mount cleanup to the
+power supervisor. Both restart and power-off must release that host mount before
+unmounting Android. The normal build compiles and packages the correction.
+Host tests exercise unmount order, an absent Gboard mount, and refusal to power
+off or restart when storage cleanup fails. No new console test has been made.
+The original PKG above is unchanged; hardware failures below remain relevant.
+This change is not a claim that all restart or display failures are resolved.
+
 ## Hardware evidence
 
 The maintainer's CUH-1102A (Aeolia), firmware 13.52, was used for release testing.
