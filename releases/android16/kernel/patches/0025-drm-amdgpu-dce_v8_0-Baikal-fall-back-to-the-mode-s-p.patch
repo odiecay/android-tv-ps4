@@ -1,0 +1,40 @@
+From 224846cd217780e5fb02e265e49257465481f5ec Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:29:41 +1000
+Subject: [PATCH 25/31] drm/amdgpu/dce_v8_0: Baikal: fall back to the mode's
+ pixel clock when the BIOS PLL adjust returns 0 (psX Baikal 0013), instead of
+ failing the mode set
+
+---
+ drivers/gpu/drm/amd/amdgpu/dce_v8_0.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c b/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
+index 46acc686a..97825fe20 100644
+--- a/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
++++ b/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
+@@ -2546,11 +2546,19 @@ static int dce_v8_0_crtc_mode_set(struct drm_crtc *crtc,
+ 	struct amdgpu_crtc *amdgpu_crtc = to_amdgpu_crtc(crtc);
+ 
+ 	if (!amdgpu_crtc->adjusted_clock) {
+-		if (adev->asic_type == CHIP_LIVERPOOL ||
+-		    adev->asic_type == CHIP_GLADIUS)
+-			DRM_ERROR("ps4 crtc mode_set: adjusted_clock=0 for %s (%d kHz)\n",
+-				  adjusted_mode->name, adjusted_mode->clock);
+-		return -EINVAL;
++		/* Baikal: the video BIOS's AdjustDisplayPll can return 0; use the
++		 * mode's own pixel clock, as the psX Baikal kernel does (0013) */
++		if (amdgpu_ps4_is_baikal(adev) && adjusted_mode->clock) {
++			DRM_INFO("ps4 crtc mode_set: Baikal, BIOS PLL 0, using %d kHz\n",
++				 adjusted_mode->clock);
++			amdgpu_crtc->adjusted_clock = adjusted_mode->clock;
++		} else {
++			if (adev->asic_type == CHIP_LIVERPOOL ||
++			    adev->asic_type == CHIP_GLADIUS)
++				DRM_ERROR("ps4 crtc mode_set: adjusted_clock=0 for %s (%d kHz)\n",
++					  adjusted_mode->name, adjusted_mode->clock);
++			return -EINVAL;
++		}
+ 	}
+ 
+ 	if (adev->asic_type == CHIP_LIVERPOOL ||

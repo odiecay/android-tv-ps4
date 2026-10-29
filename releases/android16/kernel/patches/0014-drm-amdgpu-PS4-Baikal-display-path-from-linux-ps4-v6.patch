@@ -1,0 +1,327 @@
+From 669663caebaf249e79561b22f0dd20c775a83f21 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 13:12:22 +1000
+Subject: [PATCH 14/31] drm/amdgpu/PS4: Baikal display path from linux-ps4 v60
+ (dp_extclk, DP TX/link training, MN864729 bridge)
+
+Port the functional parts of the v60 Baikal HDMI fixes that the 6.15
+Baikal kernel needed for a picture. Every change is gated on
+amdgpu_ps4_is_baikal() (Liverpool/Gladius and the 104d:90d7 southbridge
+present), so Aeolia and Belize behaviour is unchanged.
+
+- ignore the VBIOS dp_extclk so DP gets a real PPLL
+- floor dp_clock to 270000 (4 lanes) in AdjustDisplayPll when DPCD gave 0
+- skip kernel DP link training; the MN864729 trains the link
+- skip DIG TX DISABLE/ENABLE on DP to keep the firmware-trained lane lock
+- bridge: program VIC 16 at register, 500 ms settle before enable,
+  no disable/post_disable, non-CEA modes run as VIC 16 / 1080p60,
+  detect stays connected with 4 lanes @ 2.7 Gbps when DPCD fails
+
+Diagnostic logging from v60 is not carried over.
+---
+ drivers/gpu/drm/amd/amdgpu/amdgpu_atombios.c  |  6 ++
+ drivers/gpu/drm/amd/amdgpu/amdgpu_mode.h      |  9 ++
+ drivers/gpu/drm/amd/amdgpu/atombios_crtc.c    | 15 +++
+ drivers/gpu/drm/amd/amdgpu/atombios_dp.c      |  4 +
+ .../gpu/drm/amd/amdgpu/atombios_encoders.c    | 30 ++++--
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c       | 95 ++++++++++++++++++-
+ 6 files changed, 148 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_atombios.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_atombios.c
+index acd22bff1..bee8152cc 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_atombios.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_atombios.c
+@@ -718,6 +718,12 @@ int amdgpu_atombios_get_clock_info(struct amdgpu_device *adev)
+ 		}
+ 		adev->clock.dp_extclk =
+ 			le16_to_cpu(firmware_info->info_21.usUniphyDPModeExtClkFreq);
++		/* PS4 Baikal: no usable external DP clock; drive DP from a PPLL */
++		if (adev->clock.dp_extclk && amdgpu_ps4_is_baikal(adev)) {
++			DRM_INFO("ps4: Baikal, ignoring VBIOS dp_extclk=%u\n",
++				 adev->clock.dp_extclk);
++			adev->clock.dp_extclk = 0;
++		}
+ 
+ 		adev->clock.max_pixel_clock = le16_to_cpu(firmware_info->info.usMaxPixelClock);
+ 		if (adev->clock.max_pixel_clock == 0)
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_mode.h b/drivers/gpu/drm/amd/amdgpu/amdgpu_mode.h
+index 8069fc41c..15cf8d942 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_mode.h
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_mode.h
+@@ -711,4 +711,13 @@ int amdgpu_display_crtc_page_flip_target(struct drm_crtc *crtc,
+ 				struct drm_modeset_acquire_ctx *ctx);
+ extern const struct drm_mode_config_funcs amdgpu_mode_funcs;
+ 
++#ifdef CONFIG_X86_PS4
++bool amdgpu_ps4_is_baikal(struct amdgpu_device *adev);
++#else
++static inline bool amdgpu_ps4_is_baikal(struct amdgpu_device *adev)
++{
++	return false;
++}
++#endif
++
+ #endif
+diff --git a/drivers/gpu/drm/amd/amdgpu/atombios_crtc.c b/drivers/gpu/drm/amd/amdgpu/atombios_crtc.c
+index 3dfc28840..015948090 100644
+--- a/drivers/gpu/drm/amd/amdgpu/atombios_crtc.c
++++ b/drivers/gpu/drm/amd/amdgpu/atombios_crtc.c
+@@ -333,6 +333,21 @@ static u32 amdgpu_atombios_crtc_adjust_pll(struct drm_crtc *crtc,
+ 		}
+ 	}
+ 
++	/* PS4 Baikal: internal DP link is 4 lanes @ 2.7 Gbps if DPCD gave nothing */
++	if (dp_clock == 0 && amdgpu_ps4_is_baikal(adev)) {
++		DRM_INFO("ps4: Baikal, dp_clock 0 -> 270000\n");
++		dp_clock = 270000;
++		if (connector) {
++			struct amdgpu_connector_atom_dig *dig_connector =
++				to_amdgpu_connector(connector)->con_priv;
++
++			if (dig_connector && !dig_connector->dp_clock) {
++				dig_connector->dp_clock = 270000;
++				dig_connector->dp_lane_count = 4;
++			}
++		}
++	}
++
+ 	/* use recommended ref_div for ss */
+ 	if (amdgpu_encoder->devices & (ATOM_DEVICE_LCD_SUPPORT)) {
+ 		if (amdgpu_crtc->ss_enabled) {
+diff --git a/drivers/gpu/drm/amd/amdgpu/atombios_dp.c b/drivers/gpu/drm/amd/amdgpu/atombios_dp.c
+index 9a42f17ad..f324615a0 100644
+--- a/drivers/gpu/drm/amd/amdgpu/atombios_dp.c
++++ b/drivers/gpu/drm/amd/amdgpu/atombios_dp.c
+@@ -761,6 +761,10 @@ void amdgpu_atombios_dp_link_train(struct drm_encoder *encoder,
+ 	struct amdgpu_atombios_dp_link_train_info dp_info;
+ 	u8 tmp;
+ 
++	/* PS4 Baikal: the MN864729 trains the internal DP link itself */
++	if (amdgpu_ps4_is_baikal(adev))
++		return;
++
+ 	if (!amdgpu_encoder->enc_priv)
+ 		return;
+ 
+diff --git a/drivers/gpu/drm/amd/amdgpu/atombios_encoders.c b/drivers/gpu/drm/amd/amdgpu/atombios_encoders.c
+index 2c5d761bd..2f3a4a360 100644
+--- a/drivers/gpu/drm/amd/amdgpu/atombios_encoders.c
++++ b/drivers/gpu/drm/amd/amdgpu/atombios_encoders.c
+@@ -1295,6 +1295,20 @@ amdgpu_atombios_encoder_setup_external_encoder(struct drm_encoder *encoder,
+ 	amdgpu_atom_execute_table(adev->mode_info.atom_context, index, (uint32_t *)&args, sizeof(args));
+ }
+ 
++/*
++ * PS4 Baikal: the firmware leaves the GPU->MN864729 DP link trained.
++ * TX DISABLE/ENABLE drop the bridge's lane lock (0x60f8) and the bridge
++ * then never comes up, so leave the transmitter alone on DP.
++ */
++static bool
++amdgpu_ps4_baikal_keep_dp_tx(struct drm_encoder *encoder,
++			     struct drm_connector *connector)
++{
++	return connector &&
++	       ENCODER_MODE_IS_DP(amdgpu_atombios_encoder_get_encoder_mode(encoder)) &&
++	       amdgpu_ps4_is_baikal(drm_to_adev(encoder->dev));
++}
++
+ static void
+ amdgpu_atombios_encoder_setup_dig(struct drm_encoder *encoder, int action)
+ {
+@@ -1332,10 +1346,11 @@ amdgpu_atombios_encoder_setup_dig(struct drm_encoder *encoder, int action)
+ 				amdgpu_dig_connector->edp_on = true;
+ 			}
+ 		}
+-		/* enable the transmitter */
+-		amdgpu_atombios_encoder_setup_dig_transmitter(encoder,
+-						       ATOM_TRANSMITTER_ACTION_ENABLE,
+-						       0, 0);
++		/* enable the transmitter (PS4 Baikal: keep the firmware-trained DP TX) */
++		if (!amdgpu_ps4_baikal_keep_dp_tx(encoder, connector))
++			amdgpu_atombios_encoder_setup_dig_transmitter(encoder,
++							       ATOM_TRANSMITTER_ACTION_ENABLE,
++							       0, 0);
+ 		if (ENCODER_MODE_IS_DP(amdgpu_atombios_encoder_get_encoder_mode(encoder)) &&
+ 		    connector) {
+ 			/* DP_SET_POWER_D0 is set in amdgpu_atombios_dp_link_train */
+@@ -1360,9 +1375,10 @@ amdgpu_atombios_encoder_setup_dig(struct drm_encoder *encoder, int action)
+ 		if (ENCODER_MODE_IS_DP(amdgpu_atombios_encoder_get_encoder_mode(encoder)) &&
+ 		    connector)
+ 			amdgpu_atombios_dp_set_rx_power_state(connector, DP_SET_POWER_D3);
+-		/* disable the transmitter */
+-		amdgpu_atombios_encoder_setup_dig_transmitter(encoder,
+-						       ATOM_TRANSMITTER_ACTION_DISABLE, 0, 0);
++		/* disable the transmitter (PS4 Baikal: keep the firmware-trained DP TX) */
++		if (!amdgpu_ps4_baikal_keep_dp_tx(encoder, connector))
++			amdgpu_atombios_encoder_setup_dig_transmitter(encoder,
++							       ATOM_TRANSMITTER_ACTION_DISABLE, 0, 0);
+ 		if (ENCODER_MODE_IS_DP(amdgpu_atombios_encoder_get_encoder_mode(encoder)) &&
+ 		    connector) {
+ 			if (connector->connector_type == DRM_MODE_CONNECTOR_eDP) {
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index eaae94044..75d2e20d1 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -469,6 +469,18 @@ static int ps4_bridge_read_edid_block_icc(void *data, u8 *buf,
+ 	return 0;
+ }
+ 
++bool amdgpu_ps4_is_baikal(struct amdgpu_device *adev)
++{
++	return (adev->asic_type == CHIP_LIVERPOOL ||
++		adev->asic_type == CHIP_GLADIUS) && ps4_is_baikal();
++}
++
++static bool ps4_bridge_is_baikal(struct ps4_bridge *mn_bridge)
++{
++	return mn_bridge->connector &&
++	       amdgpu_ps4_is_baikal(drm_to_adev(mn_bridge->connector->dev));
++}
++
+ static inline struct ps4_bridge *
+ 		bridge_to_ps4_bridge(struct drm_bridge *bridge)
+ {
+@@ -526,7 +538,14 @@ void ps4_bridge_mode_set(struct drm_bridge *bridge,
+ 	mn_bridge->mode = drm_match_cea_mode(adjusted_mode);
+ 	DRM_DEBUG_KMS("vic mode: %d\n", mn_bridge->mode);
+ 	if (!mn_bridge->mode) {
+-		DRM_ERROR("attempted to set non-CEA mode\n");
++		/* Baikal: run the bridge at 1080p60 (VIC 16) for non-CEA timings */
++		if (ps4_bridge_is_baikal(mn_bridge)) {
++			DRM_INFO("ps4_bridge: non-CEA mode %dx%d, using VIC 16\n",
++				 adjusted_mode->hdisplay, adjusted_mode->vdisplay);
++			mn_bridge->mode = 16;
++		} else {
++			DRM_ERROR("attempted to set non-CEA mode\n");
++		}
+ 	}
+ }
+ 
+@@ -820,6 +839,10 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
+ 
+ 	DRM_DEBUG_KMS("ps4_bridge_enable (mode: %d)\n", mn_bridge->mode);
+ 
++	/* Baikal: let the GPU DP TX settle before the bridge waits for lock */
++	if (ps4_bridge_is_baikal(mn_bridge))
++		msleep(500);
++
+ 	/* Here come the dragons */
+ 
+ 	if (!is_mn864729)
+@@ -983,6 +1006,10 @@ static void ps4_bridge_disable(struct drm_bridge *bridge)
+ {
+ 	struct ps4_bridge *mn_bridge = bridge_to_ps4_bridge(bridge);
+ 
++	/* Baikal: muting here leaves HDMI dark after the next enable */
++	if (ps4_bridge_is_baikal(mn_bridge))
++		return;
++
+ 	mutex_lock(&mn_bridge->mutex);
+ 	if (!mn_bridge->enabled) {
+ 		mn_bridge->enabled = false;
+@@ -1011,6 +1038,10 @@ static void ps4_bridge_post_disable(struct drm_bridge *bridge)
+ 
+ 	DRM_DEBUG_KMS("ps4_bridge_post_disable\n");
+ 
++	/* Baikal: keep the bridge configured across GPU modesets */
++	if (ps4_bridge_is_baikal(mn_bridge))
++		return;
++
+ 	mutex_lock(&mn_bridge->mutex);
+ 	mn_bridge->enabled = false;
+ 	mn_bridge->enabling = false;
+@@ -1303,6 +1334,16 @@ enum drm_connector_status ps4_bridge_detect(struct drm_connector *connector,
+ 	if (!amdgpu_connector->ddc_bus || !amdgpu_connector->ddc_bus->has_aux)
+ 		return connector_status_connected;
+ 
++	/* Baikal: the internal link is fixed at 4 lanes @ 2.7 Gbps */
++	if (dpcd_ret != 0 && ps4_bridge_is_baikal(mn_bridge)) {
++		if (dig_connector) {
++			dig_connector->dp_sink_type = CONNECTOR_OBJECT_ID_DISPLAYPORT;
++			dig_connector->dp_lane_count = 4;
++			dig_connector->dp_clock = 270000;
++		}
++		return connector_status_connected;
++	}
++
+ 	return dpcd_ret == 0 ? connector_status_connected :
+ 	       connector_status_disconnected;
+ }
+@@ -1310,9 +1351,16 @@ enum drm_connector_status ps4_bridge_detect(struct drm_connector *connector,
+ enum drm_mode_status ps4_bridge_mode_valid(struct drm_connector *connector,
+ 				  const struct drm_display_mode *mode)
+ {
+-	if (!drm_match_cea_mode(mode))
+-		return MODE_BAD;
+-	return MODE_OK;
++	if (drm_match_cea_mode(mode))
++		return MODE_OK;
++
++	/* Baikal: 1080p/720p timings that miss a VIC run as VIC 16 */
++	if (g_bridge && ps4_bridge_is_baikal(g_bridge) &&
++	    ((mode->hdisplay == 1920 && mode->vdisplay == 1080) ||
++	     (mode->hdisplay == 1280 && mode->vdisplay == 720)))
++		return MODE_OK;
++
++	return MODE_BAD;
+ }
+ 
+ static int ps4_bridge_attach(struct drm_bridge *bridge,
+@@ -1324,12 +1372,48 @@ static int ps4_bridge_attach(struct drm_bridge *bridge,
+ 	return 0;
+ }
+ 
++/*
++ * Baikal: the bridge is set up for a CEA VIC; make the GPU output 1080p60
++ * when the requested mode is not one, so both sides agree.
++ */
++static bool ps4_bridge_mode_fixup(struct drm_bridge *bridge,
++				  const struct drm_display_mode *mode,
++				  struct drm_display_mode *adjusted_mode)
++{
++	struct ps4_bridge *mn_bridge = bridge_to_ps4_bridge(bridge);
++
++	if (!ps4_bridge_is_baikal(mn_bridge) || drm_match_cea_mode(mode))
++		return true;
++
++	DRM_INFO("ps4_bridge: non-CEA mode %dx%d, forcing 1920x1080@60\n",
++		 mode->hdisplay, mode->vdisplay);
++	drm_mode_copy(adjusted_mode, &mode_1080p);
++	return true;
++}
++
++/*
++ * Baikal: program the MN864729 once at registration with VIC 16, as the
++ * working 6.15 Baikal kernel did; the modeset path then re-runs enable.
++ */
++static void ps4_bridge_baikal_init(struct ps4_bridge *mn_bridge)
++{
++	struct pci_dev *pdev = to_pci_dev(mn_bridge->connector->dev->dev);
++
++	DRM_INFO("ps4_bridge: Baikal, initialising bridge at register (VIC 16)\n");
++	mn_bridge->mode = 16;
++	ps4_bridge_pre_enable(&mn_bridge->bridge);
++	msleep(500);
++	if (!ps4_bridge_enable_mn864729_video(mn_bridge, pdev))
++		ps4_bridge_enable_mn864729_audio(mn_bridge);
++}
++
+ static struct drm_bridge_funcs ps4_bridge_funcs = {
+ 	.pre_enable = ps4_bridge_pre_enable,
+ 	.enable = ps4_bridge_enable,
+ 	.disable = ps4_bridge_disable,
+ 	.post_disable = ps4_bridge_post_disable,
+ 	.attach = ps4_bridge_attach,
++	.mode_fixup = ps4_bridge_mode_fixup,
+ 	.mode_set = ps4_bridge_mode_set,
+ };
+ 
+@@ -1375,5 +1459,8 @@ int ps4_bridge_register(struct drm_connector *connector,
+ 
+ 	g_bridge = mn_bridge;
+ 
++	if (ps4_bridge_is_baikal(mn_bridge))
++		ps4_bridge_baikal_init(mn_bridge);
++
+ 	return 0;
+ }

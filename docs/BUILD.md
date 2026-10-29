@@ -1,3 +1,5 @@
+> **Android 16 v0.1:** use [the Android 16 source guide](../releases/android16/README.md). The document below describes Android 13 / 1.1.
+
 # Building Android TV for PS4
 
 The active code is in `releases/release-1.0`. The native launcher, local payload runner, modified kexec loader, helper objects and package metadata can be built from this checkout plus the pinned dependencies below.

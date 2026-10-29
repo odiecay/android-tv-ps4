@@ -1,0 +1,15 @@
+{
+  "base_iso": {
+    "file": "lineage-23.2-20261025-UNOFFICIAL-x86_64_tv.iso",
+    "bytes": 2885545984,
+    "sha256": "faa5aa6b0bb70e456dd90cd22b4b520c7ad959f8d19abb7b8c36ddde11e38aab",
+    "kind": "external prebuilt LineageOS 23.2 Android 16 x86_64 TV input",
+    "public_exact_download_url": null
+  },
+  "gapps": {
+    "repository": "https://github.com/Waydroid-ATV/mindthegapps_tv",
+    "commit": "38dd398368f90919610667edacb0c6922310fee3",
+    "branch": "baklava"
+  },
+  "note": "The exact released system.sfs can be recovered from the released v0.1 PKG; no unpublished base is needed for launcher or runtime-only development."
+}

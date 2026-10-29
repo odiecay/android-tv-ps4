@@ -1,0 +1,83 @@
+From c879b169ec696eac726593a049de47c99f61571b Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Tue, 27 Oct 2026 15:36:46 +1000
+Subject: [PATCH 05/31] ps4: read the southbridge ID through a device mapping
+ in ps4_is_baikal_early(); phys_to_virt() of ECAM faults where it is unmapped
+ (Aeolia fat died silently)
+
+---
+ arch/x86/platform/ps4/ps4.c | 36 +++++++++++++++++++++++++++++++-----
+ 1 file changed, 31 insertions(+), 5 deletions(-)
+
+diff --git a/arch/x86/platform/ps4/ps4.c b/arch/x86/platform/ps4/ps4.c
+index 258154215..f0aed8893 100644
+--- a/arch/x86/platform/ps4/ps4.c
++++ b/arch/x86/platform/ps4/ps4.c
+@@ -16,6 +16,7 @@
+ #include <linux/irq.h>
+ #include <linux/module.h>
+ #include <linux/notifier.h>
++#include <linux/slab.h>
+ 
+ #include <asm/setup.h>
+ #include <asm/mpspec_def.h>
+@@ -23,6 +24,7 @@
+ #include <asm/apic.h>
+ #include <asm/io_apic.h>
+ #include <asm/io.h>
++#include <asm/early_ioremap.h>
+ #include <asm/i8259.h>
+ #include <asm/reboot.h>
+ #include <asm/msr.h>
+@@ -85,10 +87,21 @@ EXPORT_SYMBOL_GPL(ps4_is_baikal);
+ 
+ static int ps4_baikal_cached = -1;
+ 
+-int ps4_is_baikal_early(void)
++#define PS4_SOUTHBRIDGE_CFG	0xf80a0000UL	/* ECAM: bus 0, device 0x14, function 0 */
++
++/*
++ * Whether the southbridge is Baikal, usable before the PCI core is up.
++ *
++ * PCI config space is device memory, not RAM, so it is normally not in the
++ * kernel's direct map: reading it through phys_to_virt() faults on consoles
++ * where it is unmapped (an Aeolia fat died silently here before any output).
++ * Read it through a real device mapping instead; if none can be made, answer
++ * "not Baikal", which is the long-standing default path.
++ */
++int __ref ps4_is_baikal_early(void)
+ {
+-	u32 id;
+-	void *cfg;
++	void __iomem *cfg;
++	u32 id = 0;
+ 
+ 	if (!is_ps4)
+ 		return 0;
+@@ -96,11 +109,24 @@ int ps4_is_baikal_early(void)
+ 	if (ps4_baikal_cached >= 0)
+ 		return ps4_baikal_cached;
+ 
+-	cfg = phys_to_virt(0xf80a0000);
+-	id = readl(cfg);
++	if (slab_is_available()) {
++		cfg = ioremap(PS4_SOUTHBRIDGE_CFG, 4);
++		if (cfg) {
++			id = readl(cfg);
++			iounmap(cfg);
++		}
++	} else {
++		cfg = early_ioremap(PS4_SOUTHBRIDGE_CFG, 4);
++		if (cfg) {
++			id = readl(cfg);
++			early_iounmap(cfg, 4);
++		}
++	}
+ 
+ 	ps4_baikal_cached = ((id & 0xffff) == PCI_VENDOR_ID_SONY &&
+ 			     ((id >> 16) & 0xffff) == PCI_DEVICE_ID_SONY_BAIKAL_ACPI);
++	pr_info("ps4: southbridge id %08x, Baikal paths %s\n", id,
++		ps4_baikal_cached ? "on" : "off");
+ 	return ps4_baikal_cached;
+ }
+ 

@@ -1,0 +1,39 @@
+From 1360d9910b8f093ce083ae9da54827458b079b15 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 10:48:19 +1000
+Subject: [PATCH 13/31] sky2/PS4: mask the PHY interrupt up front on Aeolia
+ only (where the storm was seen); other southbridges rely on the
+ measured-storm guard
+
+---
+ drivers/net/ethernet/marvell/sky2.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/sky2.c b/drivers/net/ethernet/marvell/sky2.c
+index 5a3758f72..97f629f1b 100644
+--- a/drivers/net/ethernet/marvell/sky2.c
++++ b/drivers/net/ethernet/marvell/sky2.c
+@@ -1770,8 +1770,11 @@ static int sky2_open(struct net_device *dev)
+ #ifdef CONFIG_X86_PS4
+ 	/* Aeolia raises the PHY interrupt thousands of times a second without
+ 	 * the poll path ever seeing it (a whole CPU core in NET_RX softirq).
+-	 * Leave it masked; sky2_ps4_phy_guard() checks the link once a second. */
+-	if (hw->pdev->vendor == PCI_VENDOR_ID_SONY) {
++	 * Leave it masked; sky2_ps4_phy_guard() checks the link once a second.
++	 * Only seen on Aeolia; other southbridges keep the interrupt until the
++	 * guard measures a storm. */
++	if (hw->pdev->vendor == PCI_VENDOR_ID_SONY &&
++	    hw->pdev->device == PCI_DEVICE_ID_SONY_AEOLIA_GBE) {
+ 		struct sky2_port *ps4_port = netdev_priv(hw->dev[port]);
+ 
+ 		imask &= ~((port == 0 ? Y2_IS_IRQ_PHY1 : Y2_IS_IRQ_PHY2) | Y2_IS_PHY_QLNK);
+@@ -1783,7 +1786,8 @@ static int sky2_open(struct net_device *dev)
+ #ifdef CONFIG_X86_PS4
+ 	/* Link-up normally arrives through the PHY interrupt masked above, and the
+ 	 * watchdog is only started at link-up, so start it now to find the link. */
+-	if (hw->pdev->vendor == PCI_VENDOR_ID_SONY)
++	if (hw->pdev->vendor == PCI_VENDOR_ID_SONY &&
++	    hw->pdev->device == PCI_DEVICE_ID_SONY_AEOLIA_GBE)
+ 		mod_timer(&hw->watchdog_timer, jiffies + HZ);
+ #endif
+ 

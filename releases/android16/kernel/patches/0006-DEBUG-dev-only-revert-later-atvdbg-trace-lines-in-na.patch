@@ -1,0 +1,99 @@
+From 33eca7ed40b6e571343d939b94d1f287b9971700 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Tue, 27 Oct 2026 16:05:32 +1000
+Subject: [PATCH 06/31] DEBUG (dev only, revert later): atvdbg trace lines in
+ namespace creation and pernet init
+
+---
+ kernel/nsproxy.c         | 8 ++++++++
+ net/core/net_namespace.c | 9 ++++++++-
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/kernel/nsproxy.c b/kernel/nsproxy.c
+index 3fb1595a4..f2e291b2b 100644
+--- a/kernel/nsproxy.c
++++ b/kernel/nsproxy.c
+@@ -96,6 +96,7 @@ static struct nsproxy *create_new_namespaces(u64 flags,
+ 	if (!new_nsp)
+ 		return ERR_PTR(-ENOMEM);
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns mnt start (%s)\n", tsk->comm);
+ 	new_nsp->mnt_ns = copy_mnt_ns(flags, tsk->nsproxy->mnt_ns,
+ 				      user_ns, new_fs);
+ 	if (IS_ERR(new_nsp->mnt_ns)) {
+@@ -103,18 +104,21 @@ static struct nsproxy *create_new_namespaces(u64 flags,
+ 		goto out_ns;
+ 	}
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns uts start (%s)\n", tsk->comm);
+ 	new_nsp->uts_ns = copy_utsname(flags, user_ns, tsk->nsproxy->uts_ns);
+ 	if (IS_ERR(new_nsp->uts_ns)) {
+ 		err = PTR_ERR(new_nsp->uts_ns);
+ 		goto out_uts;
+ 	}
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns ipc start (%s)\n", tsk->comm);
+ 	new_nsp->ipc_ns = copy_ipcs(flags, user_ns, tsk->nsproxy->ipc_ns);
+ 	if (IS_ERR(new_nsp->ipc_ns)) {
+ 		err = PTR_ERR(new_nsp->ipc_ns);
+ 		goto out_ipc;
+ 	}
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns pid start (%s)\n", tsk->comm);
+ 	new_nsp->pid_ns_for_children =
+ 		copy_pid_ns(flags, user_ns, tsk->nsproxy->pid_ns_for_children);
+ 	if (IS_ERR(new_nsp->pid_ns_for_children)) {
+@@ -122,6 +126,7 @@ static struct nsproxy *create_new_namespaces(u64 flags,
+ 		goto out_pid;
+ 	}
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns cgroup start (%s)\n", tsk->comm);
+ 	new_nsp->cgroup_ns = copy_cgroup_ns(flags, user_ns,
+ 					    tsk->nsproxy->cgroup_ns);
+ 	if (IS_ERR(new_nsp->cgroup_ns)) {
+@@ -129,12 +134,14 @@ static struct nsproxy *create_new_namespaces(u64 flags,
+ 		goto out_cgroup;
+ 	}
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns net start (%s)\n", tsk->comm);
+ 	new_nsp->net_ns = copy_net_ns(flags, user_ns, tsk->nsproxy->net_ns);
+ 	if (IS_ERR(new_nsp->net_ns)) {
+ 		err = PTR_ERR(new_nsp->net_ns);
+ 		goto out_net;
+ 	}
+ 
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns time start (%s)\n", tsk->comm);
+ 	new_nsp->time_ns_for_children = copy_time_ns(flags, user_ns,
+ 					tsk->nsproxy->time_ns_for_children);
+ 	if (IS_ERR(new_nsp->time_ns_for_children)) {
+@@ -142,6 +149,7 @@ static struct nsproxy *create_new_namespaces(u64 flags,
+ 		goto out_time;
+ 	}
+ 	new_nsp->time_ns = get_time_ns(tsk->nsproxy->time_ns);
++	if (flags & CLONE_NEWNET) pr_info("atvdbg: ns all created (%s)\n", tsk->comm);
+ 
+ 	return new_nsp;
+ 
+diff --git a/net/core/net_namespace.c b/net/core/net_namespace.c
+index af26bb779..788dc29f9 100644
+--- a/net/core/net_namespace.c
++++ b/net/core/net_namespace.c
+@@ -436,10 +436,17 @@ static __net_init int setup_net(struct net *net)
+ 	net->net_cookie = ns_tree_gen_id(net);
+ 
+ 	list_for_each_entry(ops, &pernet_list, list) {
++		if (net != &init_net)
++			pr_info("atvdbg: netns init %ps\n", ops->init);
+ 		error = ops_init(ops, net);
+-		if (error < 0)
++		if (error < 0) {
++			if (net != &init_net)
++				pr_info("atvdbg: netns init %ps failed %d\n", ops->init, error);
+ 			goto out_undo;
++		}
+ 	}
++	if (net != &init_net)
++		pr_info("atvdbg: netns init done\n");
+ 	down_write(&net_rwsem);
+ 	list_add_tail_rcu(&net->list, &net_namespace_list);
+ 	up_write(&net_rwsem);

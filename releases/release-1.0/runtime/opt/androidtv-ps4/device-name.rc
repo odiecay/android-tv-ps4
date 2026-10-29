@@ -2,8 +2,10 @@
 # This exits after setting the default; it does not overwrite a custom name.
 service androidtv-device-name /system/bin/sh /system/bin/androidtv-device-name.sh
     class core
-    user system
-    group system
+    # shell, as for adb: Android refuses Developer options from a caller
+    # with no package (system here), and shell has the settings permissions
+    user shell
+    group shell
     disabled
     oneshot
 

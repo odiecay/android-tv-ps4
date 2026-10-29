@@ -1,0 +1,44 @@
+{
+  "files": {
+    "AndroidTVHome/base.apk": {
+      "bytes": 13108459,
+      "sha256": "ab3b8610009d8a7216f289d750d7a3c092b19f6926a5bf92ec0f27fcc16346b4"
+    },
+    "AndroidTVHome/split_config.en.apk": {
+      "bytes": 192722,
+      "sha256": "84619facf6e49cb2665b2b2ed1d7faa5aa3a683e901f21a543c06893953a1577"
+    },
+    "AndroidTVHome/split_config.mdpi.apk": {
+      "bytes": 40203,
+      "sha256": "ef0a960cb8aec4ee220ef2d27f14392dbb57f1da254aaa65412f57c5c4e2d24c"
+    },
+    "BiglyBT.apk": {
+      "bytes": 9494654,
+      "sha256": "2633afc543da3b95cbc6ddb0faf0555a377dfcbbcf647254e08c1d86c5621e44"
+    },
+    "Gboard.apk": {
+      "bytes": 31264627,
+      "sha256": "fa403f34ee510a3a4dbaa86f994c5f0d5e4da86fcabd3814ce7881485fa2a039"
+    },
+    "TVBro.apk": {
+      "bytes": 6790605,
+      "sha256": "d8634edfe8d94b4fb9a52005d68a090a7f1e85b7f39c2cf01a25dc9dd60942b2"
+    },
+    "TVRecommendations/TVRecommendations.apk": {
+      "bytes": 5330833,
+      "sha256": "56a8084881d50f7922202ca735b02ea6ea32e238c57c1a1a7b7451c4974e3d45"
+    },
+    "YouTubeTV-x86.apk": {
+      "bytes": 152185656,
+      "sha256": "6efe217ef66166a4513150ef97e7f44cd8ca3fe21ec2cff324c5cf23a37be39a"
+    },
+    "etc/bluetooth-ps4.rc": {
+      "bytes": 861,
+      "sha256": "2299330cda2110ebf6af491cd997240a2a7e0a3c15510a103dcb2a3c378fb520"
+    },
+    "etc/privapp-permissions-ps4-atvhome.xml": {
+      "bytes": 1662,
+      "sha256": "dfbf5166b91235f35c4611e6b5997c39ab060d86f3f0a334d5816be484de81b6"
+    }
+  }
+}

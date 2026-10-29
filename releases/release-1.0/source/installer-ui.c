@@ -5,6 +5,7 @@
 #include <orbis/SystemService.h>
 #include <sys/time.h>
 #include "installer-font.h"
+#include "build-id.h"
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -80,7 +81,7 @@ static void render(void){
  if(!boot_mode){
   if(atv_read_slide(slide_fds[slide],buffers[buffer_index],FRAME_BYTES)){
    rectangle(0,0,WIDTH,HEIGHT,0xff071327);
-   text(64,180,3,"Android TV for PS4",0xfff4f8fa);
+   text(64,180,3,"Android TV for PS4 16",0xfff4f8fa);
   }
   for(int i=0;i<INSTALLER_SLIDE_COUNT;i++)rectangle(64+i*30,480,18,4,i==slide?0xffe2f2ff:0xff4d6c91);
  }
@@ -115,7 +116,7 @@ static void render(void){
    text(480,648,2,detail,0xffa6bed9);
   }
  }
- snprintf(detail,sizeof(detail),"%d GiB  /  1.1",EDITION_GIB);text(1030,648,2,detail,0xffa6bed9);
+ snprintf(detail,sizeof(detail),"%d GiB  /  " ATV_BUILD_ID,EDITION_GIB);text(1030,648,2,detail,0xffa6bed9);
  flip:;
  int id=++frame_id;
  int rc=sceVideoOutSubmitFlip(video,buffer_index,ORBIS_VIDEO_OUT_FLIP_VSYNC,id);

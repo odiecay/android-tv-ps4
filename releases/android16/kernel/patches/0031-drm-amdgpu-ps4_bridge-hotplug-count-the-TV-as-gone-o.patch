@@ -1,0 +1,45 @@
+From 7aa4e549a1e18bdf34534fd3c2fada10b2d9bb81 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 17:25:03 +1000
+Subject: [PATCH 31/31] drm/amdgpu/ps4_bridge: hotplug: count the TV as gone
+ only after two readings in a row, so a stray HPD reading never re-runs the
+ bridge setup
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index c526256ab..ec1bd58a1 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -194,6 +194,7 @@ struct ps4_bridge {
+ 	struct delayed_work hpd_work;
+ 	bool output_off;	/* display turned off on purpose */
+ 	int hpd_last;
++	int hpd_falling;
+ 	unsigned int hpd_rising;
+ 	unsigned int hpd_retries;	/* setups tried without a replug */
+ 	unsigned int hpd_logged;
+@@ -1542,12 +1543,17 @@ static void ps4_bridge_hpd_work(struct work_struct *work)
+ 
+ 	hpd = wanted ? ps4_bridge_read_hpd(mn_bridge) : -EAGAIN;
+ 	if (hpd == 0) {
+-		if (mn_bridge->hpd_last == 1)
+-			DRM_INFO("ps4_bridge: TV disconnected\n");
+-		mn_bridge->hpd_last = 0;
++		/* Gone only after two readings in a row (4 s), so one stray
++		 * reading never leads to the bridge being set up again */
+ 		mn_bridge->hpd_rising = 0;
+-		mn_bridge->hpd_retries = 0;
++		if (++mn_bridge->hpd_falling >= 2) {
++			if (mn_bridge->hpd_last == 1)
++				DRM_INFO("ps4_bridge: TV disconnected\n");
++			mn_bridge->hpd_last = 0;
++			mn_bridge->hpd_retries = 0;
++		}
+ 	} else if (hpd == 1) {
++		mn_bridge->hpd_falling = 0;
+ 		/* Back after being gone, or here but never set up (TV was off
+ 		 * at boot or the last try failed): set up after two readings.
+ 		 * Without a replug, give up after 3 tries, so a bridge that

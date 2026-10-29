@@ -1,0 +1,27 @@
+From 91e393f2dade67fae825660946c36610418a38a5 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 14:38:31 +1000
+Subject: [PATCH 17/31] drm/amdgpu/ps4_bridge: offer modes up to 1080p only; a
+ 4K TV's preferred mode was accepted and 4K through the bridge is unproven
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 75d2e20d1..8e6b14fd3 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -1351,6 +1351,12 @@ enum drm_connector_status ps4_bridge_detect(struct drm_connector *connector,
+ enum drm_mode_status ps4_bridge_mode_valid(struct drm_connector *connector,
+ 				  const struct drm_display_mode *mode)
+ {
++	/* Up to 1080p only: 4K through the bridge is unproven, and a 4K TV's
++	 * preferred mode would otherwise be picked and could leave no picture.
++	 * The TV scales 1080p up. */
++	if (mode->hdisplay > 1920 || mode->vdisplay > 1080 || mode->clock > 148500)
++		return MODE_CLOCK_HIGH;
++
+ 	if (drm_match_cea_mode(mode))
+ 		return MODE_OK;
+ 

@@ -1,0 +1,108 @@
+From da73333075a8e4b53a042bfaec10d6590986d720 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Tue, 27 Oct 2026 19:41:19 +1000
+Subject: [PATCH 10/31] sky2/PS4: mask a PHY interrupt that fires >50 times a
+ second and poll the link from the 1 s watchdog (Aeolia eth0 storm, ~3600
+ irq/s on bit IRQ_PHY1)
+
+---
+ drivers/net/ethernet/marvell/sky2.c | 54 +++++++++++++++++++++++++++++
+ drivers/net/ethernet/marvell/sky2.h |  6 ++++
+ 2 files changed, 60 insertions(+)
+
+diff --git a/drivers/net/ethernet/marvell/sky2.c b/drivers/net/ethernet/marvell/sky2.c
+index 270829044..cd2ac8ecf 100644
+--- a/drivers/net/ethernet/marvell/sky2.c
++++ b/drivers/net/ethernet/marvell/sky2.c
+@@ -2312,6 +2312,14 @@ static void sky2_phy_intr(struct sky2_hw *hw, unsigned port)
+ 	spin_lock(&sky2->phy_lock);
+ 	istatus = gm_phy_read(hw, port, PHY_MARV_INT_STAT);
+ 	phystat = gm_phy_read(hw, port, PHY_MARV_PHY_STAT);
++#ifdef CONFIG_X86_PS4
++	sky2->ps4_phy_irqs++;
++	if (sky2->ps4_phy_logged < 5) {
++		sky2->ps4_phy_logged++;
++		netdev_info(dev, "PS4 PHY interrupt: status 0x%04x, PHY status 0x%04x\n",
++			    istatus, phystat);
++	}
++#endif
+ 
+ 	netif_info(sky2, intr, sky2->netdev, "phy interrupt status 0x%x 0x%x\n",
+ 		   istatus, phystat);
+@@ -2964,6 +2972,45 @@ static int sky2_rx_hung(struct net_device *dev)
+ 	}
+ }
+ 
++#ifdef CONFIG_X86_PS4
++/*
++ * On the PS4's Aeolia Ethernet the PHY interrupt can keep firing thousands of
++ * times a second while the link is steady, which keeps a CPU core busy. The
++ * PHY interrupt only reports link changes, so when it fires more than 50 times
++ * in a second, mask it and check the link from this 1 s watchdog instead.
++ */
++static void sky2_ps4_phy_guard(struct sky2_hw *hw, unsigned port)
++{
++	struct net_device *dev = hw->dev[port];
++	struct sky2_port *sky2 = netdev_priv(dev);
++	u16 phystat;
++	bool up;
++
++	if (hw->pdev->vendor != PCI_VENDOR_ID_SONY || !netif_running(dev))
++		return;
++
++	spin_lock(&sky2->phy_lock);
++	if (!sky2->ps4_phy_polled && sky2->ps4_phy_irqs > 50) {
++		gm_phy_write(hw, port, PHY_MARV_INT_MASK, 0);
++		sky2->ps4_phy_polled = true;
++		netdev_info(dev, "PS4: PHY interrupt fired %u times in a second; masked, link checked once a second\n",
++			    sky2->ps4_phy_irqs);
++	}
++	sky2->ps4_phy_irqs = 0;
++	if (sky2->ps4_phy_polled) {
++		phystat = gm_phy_read(hw, port, PHY_MARV_PHY_STAT);
++		up = phystat & PHY_M_PS_LINK_UP;
++		if (up && !netif_carrier_ok(dev)) {
++			if (sky2_autoneg_done(sky2, phystat) == 0)
++				sky2_link_up(sky2);
++		} else if (!up && netif_carrier_ok(dev)) {
++			sky2_link_down(sky2);
++		}
++	}
++	spin_unlock(&sky2->phy_lock);
++}
++#endif
++
+ static void sky2_watchdog(struct timer_list *t)
+ {
+ 	struct sky2_hw *hw = timer_container_of(hw, t, watchdog_timer);
+@@ -2993,6 +3040,13 @@ static void sky2_watchdog(struct timer_list *t)
+ 			return;
+ 	}
+ 
++#ifdef CONFIG_X86_PS4
++	{
++		int i;
++		for (i = 0; i < hw->ports; i++)
++			sky2_ps4_phy_guard(hw, i);
++	}
++#endif
+ 	mod_timer(&hw->watchdog_timer, round_jiffies(jiffies + HZ));
+ }
+ 
+diff --git a/drivers/net/ethernet/marvell/sky2.h b/drivers/net/ethernet/marvell/sky2.h
+index d01d4642d..a64c76d77 100644
+--- a/drivers/net/ethernet/marvell/sky2.h
++++ b/drivers/net/ethernet/marvell/sky2.h
+@@ -2216,6 +2216,12 @@ struct sky2_stats {
+ 
+ struct sky2_port {
+ 	struct sky2_hw	     *hw;
++#ifdef CONFIG_X86_PS4
++	/* Aeolia: PHY interrupt storm guard (see sky2_ps4_phy_guard) */
++	unsigned int	     ps4_phy_irqs;
++	unsigned int	     ps4_phy_logged;
++	bool		     ps4_phy_polled;
++#endif
+ 	struct net_device    *netdev;
+ 	unsigned	     port;
+ 	u32		     msg_enable;

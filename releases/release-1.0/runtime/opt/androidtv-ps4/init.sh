@@ -1174,6 +1174,11 @@ function do_netconsole()
 
 function do_bootcomplete()
 {
+	# PS4 defaults (Bluetooth, keyboard, Developer options) right away: init
+	# waits for this whole function, and the bundled app installs below take
+	# minutes, so the service's own boot_completed trigger came far too late.
+	start androidtv-device-name
+
 	init_cpu_governor
 
 	[ -z "$(getprop persist.sys.root_access)" ] && setprop persist.sys.root_access 3
@@ -1234,8 +1239,16 @@ function do_bootcomplete()
 
 	if [ ! "$BUILD_DATETIME" == "$POST_INST_NUM" ]; then
 		for apk in $USER_APPS
-		do		
-			pm install $apk
+		do
+			# An app shipped as split APKs has its other parts in
+			# user_app-splits/<name>/ and must be installed together (pm install
+			# takes every part; install-multiple only exists in adb on a PC).
+			splits=/system/etc/user_app-splits/$(basename "$apk" .apk)
+			if [ -d "$splits" ]; then
+				pm install "$apk" "$splits"/*.apk
+			else
+				pm install $apk
+			fi
 		done
 		rm "$POST_INST"
 		touch "$POST_INST"

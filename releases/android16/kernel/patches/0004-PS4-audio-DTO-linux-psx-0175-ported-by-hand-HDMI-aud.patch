@@ -1,0 +1,36 @@
+From 32cc8277b7c0268a44d02cab3788650a394f49b0 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Tue, 27 Oct 2026 15:15:38 +1000
+Subject: [PATCH 04/31] PS4 audio DTO (linux-psx 0175) ported by hand: HDMI
+ audio clock on the DP->HDMI bridge path
+
+---
+ drivers/gpu/drm/amd/amdgpu/dce_v8_0.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c b/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
+index 154a5a272..46acc686a 100644
+--- a/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
++++ b/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
+@@ -2560,6 +2560,21 @@ static int dce_v8_0_crtc_mode_set(struct drm_crtc *crtc,
+ 			      amdgpu_crtc->adjusted_clock, amdgpu_crtc->pll_id);
+ 
+ 	amdgpu_atombios_crtc_set_pll(crtc, adjusted_mode);
++
++	/* PS4: the DP->HDMI bridge path does not run afmt_setmode(), so the
++	 * audio DTO is never programmed.  The HDA controller uses DTO0 as its
++	 * 24 MHz reference; the reset value makes audio run at ~0.615x speed.
++	 * Program DTO0 from the active adjusted pixel clock here.
++	 * (linux-psx 0175, ported to this tree by hand.)
++	 */
++	if (adev->asic_type == CHIP_LIVERPOOL || adev->asic_type == CHIP_GLADIUS) {
++		WREG32(mmDCCG_AUDIO_DTO_SOURCE,
++		       (amdgpu_crtc->crtc_id <<
++			DCCG_AUDIO_DTO_SOURCE__DCCG_AUDIO_DTO0_SOURCE_SEL__SHIFT));
++		WREG32(mmDCCG_AUDIO_DTO0_PHASE, 24 * 1000);
++		WREG32(mmDCCG_AUDIO_DTO0_MODULE, adjusted_mode->clock);
++	}
++
+ 	amdgpu_atombios_crtc_set_dtd_timing(crtc, adjusted_mode);
+ 	dce_v8_0_crtc_do_set_base(crtc, old_fb, x, y);
+ 	amdgpu_atombios_crtc_overscan_setup(crtc, mode, adjusted_mode);

@@ -1,0 +1,27 @@
+From 7b44d1412bb084108d10dcd6633687fa61a3288d Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 14:30:43 +1000
+Subject: [PATCH 16/31] drm/amdgpu/cik: keep the Gladius (PS4 Pro) revision in
+ Mesa's Kaveri range; rev_id 0x12 Pros were identified as Kabini and got no
+ PS4 raster config
+
+---
+ drivers/gpu/drm/amd/amdgpu/cik.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/cik.c b/drivers/gpu/drm/amd/amdgpu/cik.c
+index 98ac4eafa..f95deac40 100644
+--- a/drivers/gpu/drm/amd/amdgpu/cik.c
++++ b/drivers/gpu/drm/amd/amdgpu/cik.c
+@@ -2543,7 +2543,10 @@ static int cik_common_early_init(struct amdgpu_ip_block *ip_block)
+ 					AMD_PG_SUPPORT_RLC_SMU_HS |
+ 					AMD_PG_SUPPORT_SAMU |*/
+ 				0;
+-			adev->external_rev_id = adev->rev_id + 0x71;
++			/* Userspace (Mesa) reads 0x41-0x80 as Kaveri, the PS4's
++			 * profile, and 0x81 up as Kabini. Pros with rev_id 0x12
++			 * landed in Kabini and lost the PS4 raster setup. */
++			adev->external_rev_id = min(adev->rev_id + 0x71, 0x80);
+ 			break;
+ 	default:
+ 		/* FIXME: not supported yet */

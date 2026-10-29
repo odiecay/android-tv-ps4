@@ -1,0 +1,409 @@
+{
+  "release": "1.0",
+  "edition_gib": 32,
+  "logical_data_bytes": 34359738368,
+  "file": "Android-TV-for-PS4.pkg",
+  "bytes": 3166371840,
+  "sha256": "7a930b70d4eef5c9c3e48db7e18db5e803a43d190b4176bb41120da7d7a1ad2f",
+  "content_id": "IV0000-ATVX16001_00-PS4ANDROIDTV1600",
+  "package_validation": "passed",
+  "console_tested": false,
+  "public_release_ready": false,
+  "loader_build": {
+    "upstream": [
+      "https://github.com/ps4-linux/ps4-linux-loader",
+      "f70f43a60a973b3662daeb29c1f115d95408db93",
+      "tag v25.1"
+    ],
+    "images": {
+      "505": {
+        "bytes": 32068,
+        "sha256": "7379b28f4aa3469965b93b771f0d110195f14b94e0c81e93b92147dbe92248ff",
+        "console_confirmed": false
+      },
+      "672": {
+        "bytes": 32068,
+        "sha256": "ace67d712d1dabab8a326ffc6019155536f92fdb56b6aa30c69e31e41d0e59bd",
+        "console_confirmed": false
+      },
+      "700": {
+        "bytes": 32068,
+        "sha256": "e0ba4ea402f64c25474e16657826cf6c944e6c1ddbb2e2edaa0510f6949615e5",
+        "console_confirmed": false
+      },
+      "750": {
+        "bytes": 32068,
+        "sha256": "3759a32661e92e4a6ac5a59b1e87b48750c8e3037aec2fb76d07bd4da41ced0e",
+        "console_confirmed": false
+      },
+      "800": {
+        "bytes": 32068,
+        "sha256": "15b9eb142f25415fa73019b2e6b92707964dd22ae1aa50d7b437de2b1861cda2",
+        "console_confirmed": false
+      },
+      "850": {
+        "bytes": 32068,
+        "sha256": "57782e64aabeb652e0a8102a2cbadf99a1a9f7ce184ef0c5b36262acd77532f4",
+        "console_confirmed": false
+      },
+      "900": {
+        "bytes": 32068,
+        "sha256": "500bb62e0e298c692122f896d5a411b64a25373d6431077a30888878104c2bdb",
+        "console_confirmed": false
+      },
+      "903": {
+        "bytes": 32068,
+        "sha256": "d410b50829c2ea9b6f6ed09a8b9cec7cc16e7eff874939b2e4fe776c79982372",
+        "console_confirmed": false
+      },
+      "960": {
+        "bytes": 32068,
+        "sha256": "4b0b9846fa4f3fab1693bce1c6151e85159c00519d571473a6ea036641bda77d",
+        "console_confirmed": false
+      },
+      "1000": {
+        "bytes": 32068,
+        "sha256": "1e21b49a5d84d24be870a1ba50822facdd3aa608d8d3590bc8c4d55176e949ae",
+        "console_confirmed": false
+      },
+      "1050": {
+        "bytes": 32068,
+        "sha256": "bcc221b7497fee2329ee41b700e44026a5320d21187819583404efbb11b0f24f",
+        "console_confirmed": false
+      },
+      "1100": {
+        "bytes": 32068,
+        "sha256": "f76087c12adcb78b9b8af57a603968a086ed4edee62dfe9395545e57a589c060",
+        "console_confirmed": false
+      },
+      "1102": {
+        "bytes": 32068,
+        "sha256": "fbb2241f40ca6139182b27bacc8962133f22d0b61432b8221e9679c4f3a99a45",
+        "console_confirmed": false
+      },
+      "1150": {
+        "bytes": 32068,
+        "sha256": "45108ab414228235577e222db938da6dd4647c71b1f46c8047e4486d9395c8b0",
+        "console_confirmed": false
+      },
+      "1200": {
+        "bytes": 32068,
+        "sha256": "ae2d5e5045d63f33a8387c1ad9cc1c5e868b806271a0ad9c54de0087e4336fad",
+        "console_confirmed": false
+      },
+      "1250": {
+        "bytes": 32068,
+        "sha256": "a772a8c823aa80d09788cbd7cce73f8424592992f108d259d3cbdee3280ab1be",
+        "console_confirmed": false
+      },
+      "1300": {
+        "bytes": 32068,
+        "sha256": "de5c6bc95b5d94d46879a52e4f357cb995402de6d72a8b4817ef5491da571175",
+        "console_confirmed": false
+      },
+      "1302": {
+        "bytes": 32068,
+        "sha256": "e1727d3b7f2fc160d635c6490a420d7b0a384177eaa92acb812183ce47133992",
+        "console_confirmed": false
+      },
+      "1350": {
+        "bytes": 32068,
+        "sha256": "0248b302e7ecbf4ccecf45800200e116e0616e3ca629de7b4d120831817d7fdf",
+        "console_confirmed": false
+      },
+      "1352": {
+        "bytes": 32068,
+        "sha256": "2be911d9cc089e348afc2bc13bef070a2bcbb8ed79073771eed503d32b7745ee",
+        "console_confirmed": true
+      }
+    },
+    "source_sha256": {
+      "UPSTREAM": "a16049956cb6e8937916135e9534ddf288c468dd4f6b925d0b8a6e822b7eeccb",
+      "linux/magic.h": "3724ffab80f1a1b72ef01c4e43a143b1e60dabd58c17b56120335efcea436524",
+      "linux/ps4-kexec-common/LICENSE": "10bbd083fda00f90dd4b3e38c26f42281d4b52ab1dc951b0d9f55f6bf6364c4e",
+      "linux/ps4-kexec-common/Makefile": "e264beefbc323abf1eac876310a50ac118ce2f09aedd53bc787ff39fb458d857",
+      "linux/ps4-kexec-common/README.md": "c8ad35a947515b81ca3674a1c155729ba54f83b08e2d6ec89453110118a83f4e",
+      "linux/ps4-kexec-common/acpi.c": "1e5daadecf92d477e28515ac912dca560947a5e891857cb934ba04144ac9cf33",
+      "linux/ps4-kexec-common/acpi.h": "beee64b42cf220c6c0dd5eed98fcf1990dc175fff7ad7f8ebe18804e51744efd",
+      "linux/ps4-kexec-common/acpi_caps.h": "5910183223aed50068176594812cfdbf6d8500e4c2111aa94e22f739fd66d5f9",
+      "linux/ps4-kexec-common/boot-control.h": "0b0a8f0cd50e9c2a917b4c322cb4e8aeb0c7ef1c66bd18510118f4203a151501",
+      "linux/ps4-kexec-common/boot-validation.h": "5aceb30cd2d6be2498e79ef6385e171af0cc1bcc29b1b38c1dac9d4316aaf60e",
+      "linux/ps4-kexec-common/contiguous-allocation.h": "b95454cd09fdf2c706639bd14c650f6d0fdb1fd8fe184699d03ffca280ea2d85",
+      "linux/ps4-kexec-common/crc32.c": "d5e95920d4da7dc701584db1fe168e232e4e3effa3ccf4b153b3a9a01afd0e5c",
+      "linux/ps4-kexec-common/crc32.h": "eda2c51664bea867863fc6a941744a6f7f7b1221af7a42d1f6ae60a90782030f",
+      "linux/ps4-kexec-common/elf.h": "4b15c37a8cd411c468505d854a5fa5de7400b3a2355a65030443e5d89b4bbfe0",
+      "linux/ps4-kexec-common/firmware.c": "690e3e884b0baff1c2025bd1f0f8eaa5695672f71b9acea049d6475808e78aad",
+      "linux/ps4-kexec-common/firmware.h": "d7d94c4b50d7b4bd5ee530e5fff1bf5a3a67131a7c954fd6bc3abe34e92109d3",
+      "linux/ps4-kexec-common/kernel.c": "82f84b72e1af3fdb957e8829fa977432190a43844e33a447009c53ae1fdf1ac9",
+      "linux/ps4-kexec-common/kernel.h": "48d00629d31e6260824d773ab1e74f791d39aaad569cec74399b532cf379c8db",
+      "linux/ps4-kexec-common/kexec.c": "aa3b2c71e072db7f27b16cb26e13ea41188a8d3a641b9fe6be06bd2200dd46c7",
+      "linux/ps4-kexec-common/kexec.h": "e06006f8e8d30d70cc5c65e91cd8b6489a0c2ba20eabe4bfa70b760aed7c3219",
+      "linux/ps4-kexec-common/kexec.ld": "6f38fb310f8097e16530c5bec930763c77e274361cbc1802e0f6aa4660946542",
+      "linux/ps4-kexec-common/linux_boot.c": "46fb89ca0e56f8db812dc28c9853fdbf2ec12bfdb585183abd65ba3d9fe45166",
+      "linux/ps4-kexec-common/linux_boot.h": "b01131461cd8f454f9cd24364d5452f5c748bb0719a31b6a8aa5cfdb9e366f38",
+      "linux/ps4-kexec-common/linux_thunk.S": "2e5ed9783da5bf542ee78db1517d69008c4fd2fcb1ea6d842ae7fc54dd230ec6",
+      "linux/ps4-kexec-common/reboot.h": "534532d03f3ccee35c3494360996636a1586f30b9d102f16f6837939239792e6",
+      "linux/ps4-kexec-common/string.h": "55327b88fa5d98048645e8bb7342fce76c75e51f006a9f8b547a182966e35b3b",
+      "linux/ps4-kexec-common/types.h": "9714473f164d641ececf8931b8e5f258f33d296fac955390404fa5eb4bbc6798",
+      "linux/ps4-kexec-common/uart.c": "c678f621d737107f0e7cea94d2d5bcc53f8e2ea8432fce881af939550c501a15",
+      "linux/ps4-kexec-common/uart.h": "f36d502cda753afe8d1c6d4fea4462c9faaf089dc3c97d2636d697f54d6689c5",
+      "linux/ps4-kexec-common/x86.h": "e22610440a7ecbc6885a66eeed2bb26b26640409eba81d84bd48ce72ca9fc77c",
+      "linux/sb_detect.h": "dc34eeb61812fd516ada9d12d3063ba7929a97bae8e194648628ef6c5d0e0fa9"
+    }
+  },
+  "helper_object_hashes": {
+    "privileged.o": "0023873d748b6bfe6fd7c904b01b4ec8558f0ea47f1914e8ad9bb1fb9d8470d6",
+    "jailbreak.o": "49deeb0a6709e94d45e469503e2dbd3c280e31accdf2b273003cada2c3db37a6",
+    "kernelrw.o": "90a8922d7117ba46786edc6855dcf743f76cf11aa105c2e4c5fee984168ca4df"
+  },
+  "source_sha256": {
+    "Roboto-LICENSE.txt": "8fb8f30f9898fcecec3620dba5847de9b56fa1c111760873ed40c6d466839549",
+    "bluetooth-scheduling.rc": "06ea81d9afd5f5826a4ca796c268d192f3dd841904a3089c6b6bdcf69446a249",
+    "bluetooth-sd8797.c": "4580d77c6c549d0a85f93a7c5687a585e789940d7a8964d5df1ac05295c288a4",
+    "bluetooth.rc": "569efe9b97b32716b030ac9d44ceba9adcd3aa0ec8783a9aff2973cc1197fcf3",
+    "boot-payload.c": "584a767f59b725024b85ec4f748da4d60e2bc33a169174f6edc765359d81a13c",
+    "boot-stage.c": "063fe70949d9df502fa279a6a0d4312cb8071825b1c59dfff7304b4b15cac909",
+    "build-id.h": "7f14cadb087b51c160bc04ac8da87fecf8e504128305016bf85fc0f4cf19289f",
+    "display-modes.c": "bfb0b46de1351a4dbcdd80e5cc2991598077aee8f406004fb927e27261fdbc38",
+    "display-ready.c": "718169ca27fb493003658e25dc702bdfff29e813c252b9d51b507cd9766da176",
+    "display-release.h": "0c83f07f12eb4a7e0a47d8b25aa259c2941a502545dbbf6e4d260bebeb5db285",
+    "hwcomposer.rc": "28b53235f32a9e89f82bc70345ea03f53be2f449631c288eff8bc5c3068dd5e9",
+    "image-copy.c": "1d5c57d16c1850a913dfe9124f7c40d05a7f1c736e8c47f30d73058d2b2ac9e0",
+    "image-copy.h": "7354d9a314bcc0c978493ad5fc77e044c510bf12480de3985269b317b41f8f36",
+    "install-prebuilt.c": "55ab8942b3fe3d8667bf7ed629d29b00f3b13871886468196bd038af5ca5c05a",
+    "installer-artwork.h": "96773f04d1c415297d296826c86e67b9b76a598a69dd608c28b489c76d4e1b3b",
+    "installer-font.h": "a9ca40161f7f21e43cc30ba35fd4d6a3b413b19b26ed807a2421a6e55df78b7b",
+    "installer-slide.h": "7bd2be85fd78906a6e868817220970f69382bc8fb7ad7549eb32ba2954c878e1",
+    "installer-ui.c": "f9cb4673e404abcc3b3264cf305ea849c246a9db916ab645814d2829072c183f",
+    "installer-ui.h": "6237e74da1b4e0797b3e8ab993b1051bc53678f2ee926961f8fb39c28adfc968",
+    "launch-progress.h": "79e238ea17f954d1261871c9e98678df2e704e08849f39c193c668f206d403c6",
+    "launch-protocol.h": "99261a928978fa25b97128006eefa4cd0367fd93f9c2e81f1a7ff2ab9d8e6836",
+    "payload-send.c": "4646cdb0d16821ec26c3c77a1be94c935ea43ddb19128ee0b879f4ee9099d35a",
+    "payload-send.h": "ba91b489dbf7b2d554131f6601e5e98444e5b8f0a67339912dde5d5668c1d709",
+    "ps4-stat-abi.h": "dd1f05aed89932c93c325c4e167318fb7b3c592048698b2949654128a8c79caa",
+    "uninstaller.c": "a5c9ed8d0ec8b530822463055045be9e57e4c238831b7fe4843544eb11281562"
+  },
+  "delivery": "127.0.0.1:9090; GoldHEN BinLoader must be enabled; no external network",
+  "payload": {
+    "bytes": 960945,
+    "sha256": "38a1273128c0f123835b2f6988fa10c9274ce7785a44cd455bda50391553d75c",
+    "kernel_loader_sha256": "2be911d9cc089e348afc2bc13bef070a2bcbb8ed79073771eed503d32b7745ee",
+    "execution": "GoldHEN BinLoader, delivered by app to 127.0.0.1:9090",
+    "source_sha256": "584a767f59b725024b85ec4f748da4d60e2bc33a169174f6edc765359d81a13c",
+    "boot_input_checks": [
+      "#define ATV_KERNEL_BYTES 14181376ULL",
+      "#define ATV_KERNEL_CRC32 0x7c8adc06U",
+      "#define ATV_INITRD_BYTES 10439588ULL",
+      "#define ATV_INITRD_CRC32 0xbb844edeU",
+      "#define ATV_ASSET_SET_ID \"98e446bc61efba20154163f5951161e6\"",
+      "#define ATV_ASSET_IDS {{\"bootargs.txt\",\"3e7e4ba5cb348d446f223edfa3069073\"},{\"bundled-apps.sfs\",\"b62272e25831c15f153ab0265338cc55\"},{\"bzImage\",\"dc6d061be692b6d3fd146461ee32ca18\"},{\"data-gib.txt\",\"2115cdb6bfcfb008eb2bab2bb79347cb\"},{\"initramfs.cpio.xz\",\"168caa263a33f113d6d02deb6f7f1809\"},{\"libgallium-baseline.so\",\"ca0b4228ede6a6763568e6cafd4efc47\"},{\"linux.elf\",\"623c3b68592437b612ede22a4fc1a6f1\"},{\"mt7668-wifi.tar.gz\",\"0c793e556c662d2ce3ad4d940a39e6e8\"},{\"ndk-translation.tar.gz\",\"e932ec4d8a053f80b27c838a1b6f5f5a\"},{\"system.sfs\",\"b16cb2eb5faf4e059ba610b471fd0b5f\"},{\"vram.txt\",\"3ed26e56eb4e40cb4d731e5e170955b7\"}}"
+    ],
+    "helper_object_sha256": {
+      "kernel.o": "266a5bb169d42b7282f4d7eb40428fd915594fe4ce0fef749e1d8de2d8cd004f",
+      "module.o": "d8739d91f6ec5d07ba6d95fac1967433585faa3ddd93a3a69f2751f831366fba",
+      "file.o": "c4402cdecd7064852010b17ed7b857bfebe252681ab4360b541ac0e7114bdf77",
+      "syscall.o": "1cac1a5840480c7c7473d039df93bc68f0f13ea58202da0b9b78e687237fd437",
+      "start.o": "80bd69cb7dc8c11255251c22a3abdd4f61b00ad7d39ffd6379d39407b399b4c2",
+      "memory.o": "275782182b8897a2eb6329652d24cc1b768b6758b25599f0a6a920ff251dafa2"
+    },
+    "changed_from_successful_runner": "Keeps the small launcher visible during PREP; waits for matching display release after verified preparation and before ARM. Kernel handoff bytes unchanged.",
+    "console_tested": false
+  },
+  "runtime_inputs": {
+    "base_release": "retained-start",
+    "base_initramfs_sha256": "b191d815dbbb322b4cedba7ffee89f10a25a8d3e66d2601fb4151bd9d3d52ecb",
+    "initramfs_sha256": "168caa263a33f113d6d02deb6f7f18095ee54cf76a92a73351b08a2dda7d734d",
+    "initramfs_bytes": 10439588,
+    "expanded_sha256": "d38491e72da2be55704a886519c03f3933abfe7566c1f25dc84112850ead5ff3",
+    "expanded_bytes": 29997288,
+    "changed_entries": [
+      "init",
+      "opt/androidtv-ps4/android-child.sh",
+      "opt/androidtv-ps4/autoboot.sh",
+      "opt/androidtv-ps4/androidtv-ps4.rc",
+      "opt/androidtv-ps4/init.sh",
+      "opt/androidtv-ps4/product-build.prop",
+      "opt/androidtv-ps4/system-build.prop",
+      "opt/androidtv-ps4/vendor-build.prop",
+      "opt/androidtv-ps4/xt_quota2.ko",
+      "usr/sbin/androidtv-ps4-start",
+      "opt/androidtv-ps4/controller-home.sh",
+      "opt/androidtv-ps4/init.android_x86_64.rc",
+      "usr/sbin/android-supervisor",
+      "opt/androidtv-ps4/device-name.sh",
+      "opt/androidtv-ps4/device-name.rc",
+      "opt/androidtv-ps4/AtvDeviceNameOverlay.apk",
+      "opt/androidtv-ps4/AtvScreensaverOverlay.apk",
+      "lib/firmware/edid/1920x1080.bin",
+      "lib/modules/7.2.11-androidtv-ps4-a16+",
+      "lib/modules/7.2.11-androidtv-ps4-a16+/extra",
+      "lib/modules/7.2.11-androidtv-ps4-a16+/extra/psx_mts_net.ko",
+      "lib/modules/7.2.11-androidtv-ps4-a16+/extra/xt_quota2.ko",
+      "opt/androidtv-ps4/AtvSetupWizardOverlay.apk",
+      "opt/androidtv-ps4/Gboard-split_config.mdpi.apk",
+      "opt/androidtv-ps4/android_usb_class.ko",
+      "opt/androidtv-ps4/composer-drmfb.xml",
+      "opt/androidtv-ps4/libhidltransport.so",
+      "opt/androidtv-ps4/overlay_remounter",
+      "opt/androidtv-ps4/privapp-permissions-ps4-gapps.xml",
+      "opt/androidtv-ps4/ps-button"
+    ],
+    "kernel_composer_gralloc_bluetooth_unchanged": true,
+    "mesa_sha256": "ca0b4228ede6a6763568e6cafd4efc472f7d31eaae7622b03ad8d3dd3c7e545f",
+    "bundled_apps_sha256": "847a31ac6bed3066d661a7f59cc907ccc51ce87435d36e207d2f2889a8972094",
+    "bundled_app_bytes": 755453952,
+    "bundled_app_count": 11,
+    "app_storage": "Bundled read-only app filesystem, signed APKs and prepared native libraries",
+    "userdata_included": false,
+    "console_boot_tested": false,
+    "parent_initramfs_sha256": "074e526e7d971758b05f7b26a4b61c4bd3b0e21149a0cd47e89f5b2ba8eaffa3",
+    "power_supervisor_sha256": "c022fd45032a2e7cec6f723755199a6d9a5c9cacca85db5fa1e46e090a69349f",
+    "power_supervisor_source_sha256": "f0bc2b3b3e045d67581b81cf81e0f1ee4cfa7013925d16e0aa93c3ce726a7681",
+    "mt7668_wifi_sha256": "0c793e556c662d2ce3ad4d940a39e6e835fe1ecd04e3f075b6aedff8d0d26a27",
+    "mt7668_wifi_bytes": 1411221
+  },
+  "assets": {
+    "data-gib.txt": "2115cdb6bfcfb008eb2bab2bb79347cb064a48e4e7c4115ccbe4469c787bb6c4",
+    "system.sfs": "b16cb2eb5faf4e059ba610b471fd0b5f6ad8a9780d215ae1bc428bc03cae7f46",
+    "bzImage": "dc6d061be692b6d3fd146461ee32ca18776728b98cf5e5571f01e5ac31740ee1",
+    "initramfs.cpio.xz": "168caa263a33f113d6d02deb6f7f18095ee54cf76a92a73351b08a2dda7d734d",
+    "mt7668-wifi.tar.gz": "0c793e556c662d2ce3ad4d940a39e6e835fe1ecd04e3f075b6aedff8d0d26a27",
+    "bootargs.txt": "3e7e4ba5cb348d446f223edfa3069073278dc9a9ad433f49dc7f7b703faf4610",
+    "libgallium-baseline.so": "ca0b4228ede6a6763568e6cafd4efc472f7d31eaae7622b03ad8d3dd3c7e545f",
+    "bundled-apps.sfs": "b62272e25831c15f153ab0265338cc556817be4ef8c0e09b9fa658e1abbdfc30",
+    "linux.elf": "623c3b68592437b612ede22a4fc1a6f1eef6b17c4b16a1270100ece04cb3c98f",
+    "ndk-translation.tar.gz": "e932ec4d8a053f80b27c838a1b6f5f5a490548cb7525d75cb989bb4ea29a60d1",
+    "vram.txt": "3ed26e56eb4e40cb4d731e5e170955b7d03de05ec5486ef291e950aa119ba250"
+  },
+  "artwork_sha256": {
+    "slide-0.rgba": "e8bc9fd4c2363797b922e375f318dcc4a7b89635ab155d252714ce5028aa035b",
+    "slide-1.rgba": "4b39919140420d2a3bde75352805805d5e807aa18b1d228ec26d7ee0fb205c9c",
+    "slide-2.rgba": "b57b4adec17cacd95f4171a10e0775f64a021434d15876ce7630021c1128f29b",
+    "slide-3.rgba": "f47715751bbd22e120f4fee2dac332bae64c930a7ee6506c8f27ea29ae889263"
+  },
+  "bundled_apps": [
+    {
+      "label": "YouTube",
+      "package": "com.google.android.youtube.tv",
+      "version": "7.27.302",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "requires_translation": true,
+      "signer_sha256": "21199d112cece428c82cb0df221da24ff8674c7a982a83a17a970eec43305b4a"
+    },
+    {
+      "label": "Spotify",
+      "package": "com.spotify.tv.android",
+      "version": "9.1.94.1926",
+      "abis": [
+        "x86_64"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "fd450f5f94b9dba0ae7f6b19e0b512e041ea7fc2cc291b71737b319ba7f4b3d4"
+    },
+    {
+      "label": "VLC",
+      "package": "org.videolan.vlc",
+      "version": "3.7.1",
+      "abis": [
+        "x86_64"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "c8768d2cea0c4b622e419b4b4715981946821e4ebc035fb41776cad395a7f68e"
+    },
+    {
+      "label": "Jellyfin",
+      "package": "org.jellyfin.androidtv",
+      "version": "0.19.10",
+      "abis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "d881796ed2a67ff6ef9f676828723c6b1fa18e09388962cba4abc4a594a69131"
+    },
+    {
+      "label": "Kodi",
+      "package": "org.xbmc.kodi",
+      "version": "21.3",
+      "abis": [
+        "x86"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "f517b44b5db5e62a6c1ec55ba47526db7de0d61f6ba26a7987520e293499b8d5"
+    },
+    {
+      "label": "Plex",
+      "package": "com.plexapp.android",
+      "version": "10.28.0.3441",
+      "abis": [
+        "x86_64"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "822cd1246884be960e0f2667eb8afc5f7df08920363c2f16742933bfeb5717c6"
+    },
+    {
+      "label": "TV Bro",
+      "package": "com.phlox.tvwebbrowser",
+      "version": "2.1.6",
+      "abis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "1e5124be7e7fcb7a6462b47a42a8567863c6fccc6fe7708cd278be4f43047c75"
+    },
+    {
+      "label": "BiglyBT",
+      "package": "com.biglybt.android.client",
+      "version": "1.3.3",
+      "abis": [],
+      "requires_translation": false,
+      "signer_sha256": "8de2b154b9821a6c358660cd7e51de4fe7b96ac8ab695ff28150a0e0dc4d18fa"
+    },
+    {
+      "label": "Crossy Road",
+      "package": "com.yodo1.crossyroad",
+      "version": "7.14.0",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "requires_translation": true,
+      "signer_sha256": "689428097488139cdb31d2a153eee5ff5e105f8ecb2942df2e342dfcb7e3fe4b"
+    },
+    {
+      "label": "AIDA64",
+      "package": "com.finalwire.aida64",
+      "version": "2.22",
+      "abis": [
+        "x86_64"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "06e0b6a9d20aa348e2915795178d63544f056711d3fc182cb60814a1e643e276"
+    },
+    {
+      "label": "Google Play services",
+      "package": "com.google.android.gms",
+      "version": "26.11.32 (190800-885792908)",
+      "abis": [
+        "x86_64",
+        "x86"
+      ],
+      "requires_translation": false,
+      "signer_sha256": "7ce83c1b71f3d572fed04c8d40c5cb10ff75e6d87d9df6fbd53f0468c2905053"
+    }
+  ],
+  "metadata_sha256": {
+    "image-metadata.h": "46b7c720af5bcff0d99627548a227319a90965c54761d0591b49a12ff71479f9",
+    "bundled-apps.h": "a3f1760920fd97068b452b9a859bbc24fee64682d2715931fe090a2d62741a2c",
+    "bundled-apps.json": "847a31ac6bed3066d661a7f59cc907ccc51ce87435d36e207d2f2889a8972094",
+    "bundled-apps-image.json": "c4d94e6e585f667f78d0440cc3dfc4a482d12dff5b78a690d62b63fe14a86369",
+    "runtime-inputs.json": "03d7742e789c908d55dbaa1d31380b0d81b59cb5a230638d6e1533c73a1f0c9b"
+  },
+  "launcher_elf_bytes": 1490688
+}

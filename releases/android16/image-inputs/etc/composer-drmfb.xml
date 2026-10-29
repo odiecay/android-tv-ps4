@@ -1,0 +1,13 @@
+<!-- Android TV for PS4 16 dev: the PS4 GPU only has the legacy (non-atomic)
+     display path, so SurfaceFlinger uses the framebuffer composer from 13. -->
+<manifest version="1.0" type="device">
+    <hal format="hidl">
+        <name>android.hardware.graphics.composer</name>
+        <transport>hwbinder</transport>
+        <version>2.1</version>
+        <interface>
+            <name>IComposer</name>
+            <instance>drmfb</instance>
+        </interface>
+    </hal>
+</manifest>

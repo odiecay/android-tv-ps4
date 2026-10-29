@@ -28,12 +28,43 @@ ensure() {
 
 note "applying PS4 defaults"
 
+# Google voice typing ships as a keyboard and grabs every text field, opening
+# its own setup screen. Make Gboard the keyboard once; a keyboard chosen
+# later in Settings is kept. First, because setup goes almost straight to
+# Google sign-in. Gboard is a system app; the wait only covers a slow start.
+gboard=com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME
+voice=com.google.android.tts/com.google.android.apps.speech.tts.googletts.settings.asr.voiceime.VoiceInputMethodService
+if [ "$(getprop persist.vendor.androidtv.keyboard)" != 1 ]; then
+    attempt=1
+    until ime list -s -a | grep -qx "$gboard" || [ "$attempt" -gt 180 ]; do
+        attempt=$((attempt + 1))
+        sleep 5
+    done
+    if ime list -s -a | grep -qx "$gboard"; then
+        ime enable "$gboard" >/dev/null 2>&1
+        ime list -s -a | grep -qx "$voice" && ime disable "$voice" >/dev/null 2>&1
+        if ensure secure default_input_method "$gboard"; then
+            setprop persist.vendor.androidtv.keyboard 1 || note "could not record that the keyboard was set"
+        fi
+    else
+        note "keyboard: Gboard is not installed"
+    fi
+fi
+
 # Android sleep locks up PS4 Linux, so idle time runs the screensaver instead
 # and never goes to sleep. The screensaver itself is the build default
 # (screensaver-overlay); these settings back it up on installs from 1.0.
 ensure secure screensaver_enabled 1
 ensure secure screensaver_activate_on_sleep 1
 ensure secure sleep_timeout -1
+# Colors, the built-in screensaver: it needs no account or network. Google's
+# Backdrop came up black and ended, and when a screensaver ends Android turns
+# the display off; nothing on the controller woke it (28 Oct).
+ensure secure screensaver_components com.android.dreams.basic/com.android.dreams.basic.Colors
+ensure secure screensaver_default_component com.android.dreams.basic/com.android.dreams.basic.Colors
+# Screensaver after 15 minutes idle (Android TV's default, set in case a
+# setting was changed).
+ensure system screen_off_timeout 900000
 
 # Name the device "PlayStation 4" without altering Build.MODEL. The overlay
 # makes it the setup default; this also renames a 1.0 install once. A name
@@ -41,18 +72,6 @@ ensure secure sleep_timeout -1
 if [ "$(getprop persist.vendor.androidtv.named)" != 1 ]; then
     if ensure global device_name 'PlayStation 4'; then
         setprop persist.vendor.androidtv.named 1 || note "could not record that the name was set"
-    fi
-fi
-# Google voice typing ships as a keyboard and grabs every text field, opening
-# its own setup screen. Make Gboard the keyboard once; a keyboard chosen
-# later in Settings is kept.
-gboard=com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME
-voice=com.google.android.tts/com.google.android.apps.speech.tts.googletts.settings.asr.voiceime.VoiceInputMethodService
-if [ "$(getprop persist.vendor.androidtv.keyboard)" != 1 ] && ime list -s -a | grep -qx "$gboard"; then
-    ime enable "$gboard" >/dev/null 2>&1
-    ime list -s -a | grep -qx "$voice" && ime disable "$voice" >/dev/null 2>&1
-    if ensure secure default_input_method "$gboard"; then
-        setprop persist.vendor.androidtv.keyboard 1 || note "could not record that the keyboard was set"
     fi
 fi
 # Developer options and USB debugging on from the start, so nobody has to tap

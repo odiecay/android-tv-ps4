@@ -1,0 +1,63 @@
+From 803256e5e9c2327b824f63c6dd35c4cb31898d65 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:36:46 +1000
+Subject: [PATCH 28/31] drm/amdgpu/ps4_bridge: Baikal: always run 1080p60 (VIC
+ 16) in mode_fixup and drop the register-time bridge init, matching the psX
+ Baikal kernel; the init came from 1.1's Baikal kernel, which never booted
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 30 +++++++------------------
+ 1 file changed, 8 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 646635476..13fe884fc 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -1448,29 +1448,18 @@ static bool ps4_bridge_mode_fixup(struct drm_bridge *bridge,
+ {
+ 	struct ps4_bridge *mn_bridge = bridge_to_ps4_bridge(bridge);
+ 
+-	if (!ps4_bridge_is_baikal(mn_bridge) || drm_match_cea_mode(mode))
++	if (!ps4_bridge_is_baikal(mn_bridge))
+ 		return true;
+ 
+-	DRM_INFO("ps4_bridge: non-CEA mode %dx%d, forcing 1920x1080@60\n",
+-		 mode->hdisplay, mode->vdisplay);
++	/* Baikal: always drive the bridge at 1080p60 (VIC 16), as the psX
++	 * Baikal kernel that showed a picture does */
++	if (mode->hdisplay != 1920 || mode->vdisplay != 1080 ||
++	    drm_mode_vrefresh(mode) != 60)
++		DRM_INFO("ps4_bridge: Baikal, %dx%d@%d run as 1920x1080@60\n",
++			 mode->hdisplay, mode->vdisplay, drm_mode_vrefresh(mode));
+ 	drm_mode_copy(adjusted_mode, &mode_1080p);
+-	return true;
+-}
+-
+-/*
+- * Baikal: program the MN864729 once at registration with VIC 16, as the
+- * working 6.15 Baikal kernel did; the modeset path then re-runs enable.
+- */
+-static void ps4_bridge_baikal_init(struct ps4_bridge *mn_bridge)
+-{
+-	struct pci_dev *pdev = to_pci_dev(mn_bridge->connector->dev->dev);
+-
+-	DRM_INFO("ps4_bridge: Baikal, initialising bridge at register (VIC 16)\n");
+ 	mn_bridge->mode = 16;
+-	ps4_bridge_pre_enable(&mn_bridge->bridge);
+-	msleep(500);
+-	if (!ps4_bridge_enable_mn864729_video(mn_bridge, pdev))
+-		ps4_bridge_enable_mn864729_audio(mn_bridge);
++	return true;
+ }
+ 
+ static struct drm_bridge_funcs ps4_bridge_funcs = {
+@@ -1609,9 +1598,6 @@ int ps4_bridge_register(struct drm_connector *connector,
+ 
+ 	g_bridge = mn_bridge;
+ 
+-	if (ps4_bridge_is_baikal(mn_bridge))
+-		ps4_bridge_baikal_init(mn_bridge);
+-
+ 	mn_bridge->hpd_last = -1;
+ 	INIT_DELAYED_WORK(&mn_bridge->hpd_work, ps4_bridge_hpd_work);
+ 	ret = devm_add_action_or_reset(dev, ps4_bridge_stop_hpd, mn_bridge);

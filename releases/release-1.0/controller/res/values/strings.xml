@@ -1,0 +1,3 @@
+<resources>
+ <string name="description">Makes circle go back and cross select in apps built for a TV remote. Games get the controller buttons unchanged. Hold Share and Options together for a second to switch the current app between the two.</string>
+</resources>

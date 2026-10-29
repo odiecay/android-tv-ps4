@@ -1,0 +1,17 @@
+# Replaces Lineage's bluetooth-service-default.rc. HCI sockets only exist in
+# the initial Linux network namespace, and Android runs in its own, so the
+# HAL found no controller ("hci interface 0 not found") and crashed.
+# Init enters the host namespace (bound at /dev/atv-host-netns by the PS4
+# start script) before dropping to the bluetooth user, as on Android 13.
+service vendor.bluetooth-default /vendor/bin/hw/android.hardware.bluetooth-service.default
+    class hal
+    enter_namespace net /dev/atv-host-netns
+    capabilities BLOCK_SUSPEND NET_ADMIN SYS_NICE
+    user bluetooth
+    group bluetooth
+    task_profiles HighPerformance
+
+# This kernel enables RT_GROUP_SCHED. A zero foreground budget rejects
+# Bluetooth's SCHED_FIFO timer thread; allow 100 ms per one-second period.
+on post-fs-data
+    write /dev/cpuctl/foreground/cpu.rt_runtime_us 100000

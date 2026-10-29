@@ -1,0 +1,55 @@
+From f7a5067b6687a3eab54e3b6123de80903d870c1b Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:27:41 +1000
+Subject: [PATCH 21/31] Baikal: drive the SATA port through the xHCI function
+ with a 50 ms settle, as in the psX Baikal kernel that has run on hardware
+ (our target skipped it on Baikal)
+
+---
+ drivers/usb/host/xhci-aeolia.c | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/usb/host/xhci-aeolia.c b/drivers/usb/host/xhci-aeolia.c
+index 2e7afc807..1d2609968 100644
+--- a/drivers/usb/host/xhci-aeolia.c
++++ b/drivers/usb/host/xhci-aeolia.c
+@@ -223,11 +223,10 @@ static int ahci_init_one(struct pci_dev *pdev)
+ 		goto release_mem_region;
+ 	}
+ 
+-	if (pdev->device == PCI_DEVICE_ID_SONY_BAIKAL_XHCI) {
+-		rc = bpcie_baikal_sata_phy_init(pdev, hpriv->mmio);
+-		if (rc)
+-			goto unmap_registers;
+-	} else {
++	/* Belize and Baikal alike, as in the psX Baikal kernel that has run on
++	 * hardware: the Baikal-specific PHY profile is applied by ahci.c, which
++	 * probes before this driver. */
++	{
+ 		r_mem = kzalloc(sizeof(*r_mem), GFP_KERNEL);
+ 		if (r_mem) {
+ 			r_mem->r_bustag = 1;//mem
+@@ -419,7 +418,10 @@ static int xhci_aeolia_probe(struct pci_dev *dev, const struct pci_device_id *id
+ 		goto free_irqs;
+ 	}
+ 
+-	if(dev->device == PCI_DEVICE_ID_SONY_BELIZE_XHCI) {
++	/* Belize and Baikal: the SATA port is driven through this function,
++	 * as in the psX Baikal kernel that has run on hardware */
++	if (dev->device == PCI_DEVICE_ID_SONY_BELIZE_XHCI ||
++	    dev->device == PCI_DEVICE_ID_SONY_BAIKAL_XHCI) {
+ 		retval = ahci_init_one(dev);
+ 		dev_dbg(&dev->dev, "ahci_init_one returned %d", retval);
+ 		if (!retval)
+@@ -430,6 +432,11 @@ static int xhci_aeolia_probe(struct pci_dev *dev, const struct pci_device_id *id
+ 		}
+ 	}
+ 
++	/* Baikal's xHCI command queue needs ~50 ms after the SATA PHY setup,
++	 * or the first ENABLE_SLOT aborts and no USB device enumerates */
++	if (dev->device == PCI_DEVICE_ID_SONY_BAIKAL_XHCI)
++		msleep(50);
++
+ 	for (idx = 0; idx < NR_DEVICES; idx++) {
+  		if(dev->device != PCI_DEVICE_ID_SONY_AEOLIA_XHCI && idx == 1){ //this is for Belize and Baikal
+ 			continue;

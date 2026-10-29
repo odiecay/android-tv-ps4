@@ -1,0 +1,41 @@
+From 53abffd1d021c2b1c2cb5f48e8bd2c793bc240ad Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:35:05 +1000
+Subject: [PATCH 26/31] drm/amdgpu/ps4_bridge: ignore an invalid firmware EDID
+ (TV off when the PS4 read it) and use the 1080p/720p fallback modes when an
+ EDID yields none
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 2695cd052..94a9cb388 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -1153,6 +1153,13 @@ int ps4_bridge_get_modes(struct drm_connector *connector)
+ 			drm_info(dev, "ps4_bridge: EDID loaded from firmware "
+ 				 "(edid/my_edid.bin), %zu bytes\n", fw->size);
+ 			drm_edid = drm_edid_alloc(fw->data, fw->size);
++			/* The loader copies whatever EDID the PS4 last read; it is
++			 * empty when the TV was off, so check before trusting it */
++			if (drm_edid && !drm_edid_valid(drm_edid)) {
++				drm_info(dev, "ps4_bridge: firmware EDID is not valid, ignoring it\n");
++				drm_edid_free(drm_edid);
++				drm_edid = NULL;
++			}
+ 			if (drm_edid)
+ 				edid_source = "firmware";
+ 			release_firmware(fw);
+@@ -1327,7 +1334,10 @@ int ps4_bridge_get_modes(struct drm_connector *connector)
+ 			ps4_bridge_modes_logged = true;
+ 		}
+ 		drm_edid_free(drm_edid);
+-		return count;
++		if (count)
++			return count;
++		drm_info(dev, "ps4_bridge: EDID gave no modes, using fallback modes\n");
++		goto fallback_modes;
+ 	}
+ 
+ 	drm_info(dev, "ps4_bridge: no EDID available, using fallback modes\n");

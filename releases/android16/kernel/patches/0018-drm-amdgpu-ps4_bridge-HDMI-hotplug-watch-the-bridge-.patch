@@ -1,0 +1,156 @@
+From bdc2fa48fe2d7977e08b5d3e0656741c75691844 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:07:12 +1000
+Subject: [PATCH 18/31] drm/amdgpu/ps4_bridge: HDMI hotplug: watch the bridge's
+ HPD bit (TMONREG) every 2 s and set the bridge up again when a TV comes back
+ or was off at boot; nothing set it up after a replug, leaving no picture
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 102 ++++++++++++++++++++++++
+ 1 file changed, 102 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 8e6b14fd3..51ca4bbfd 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -184,11 +184,22 @@ struct ps4_bridge {
+ 
+ 	void *cached_edid;
+ 	size_t cached_edid_size;
++
++	/* TV hotplug: the GPU only sees the bridge, never the TV */
++	struct delayed_work hpd_work;
++	bool output_off;	/* display turned off on purpose */
++	int hpd_last;
++	unsigned int hpd_rising;
++	unsigned int hpd_logged;
+ };
+ 
+ /* this should really be taken care of by the connector, but that is currently
+  * contained/owned by radeon_connector so just use a global for now */
+ static struct ps4_bridge *g_bridge;
++
++/* Bridge monitor register; bit 3 follows the TV's hotplug-detect line */
++#define TMONREG 0x7008
++#define TMONREG_HPD BIT(3)
+ static bool ps4_bridge_modes_logged;
+ 
+ /* Function prototype declarations, to fix compilation warnings */
+@@ -824,6 +835,7 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
+ 
+ 	DRM_DEBUG("Enable PS4_BRIDGE_ENABLE\n");
+ 	mutex_lock(&mn_bridge->mutex);
++	mn_bridge->output_off = false;
+ 	if (mn_bridge->enabled && !is_mn864729) {
+ 		DRM_DEBUG_KMS("ps4_bridge_enable (already enabled, skip)\n");
+ 		mutex_unlock(&mn_bridge->mutex);
+@@ -1006,6 +1018,10 @@ static void ps4_bridge_disable(struct drm_bridge *bridge)
+ {
+ 	struct ps4_bridge *mn_bridge = bridge_to_ps4_bridge(bridge);
+ 
++	mutex_lock(&mn_bridge->mutex);
++	mn_bridge->output_off = true;
++	mutex_unlock(&mn_bridge->mutex);
++
+ 	/* Baikal: muting here leaves HDMI dark after the next enable */
+ 	if (ps4_bridge_is_baikal(mn_bridge))
+ 		return;
+@@ -1423,6 +1439,85 @@ static struct drm_bridge_funcs ps4_bridge_funcs = {
+ 	.mode_set = ps4_bridge_mode_set,
+ };
+ 
++/* 1 if a TV is connected, 0 if not, negative if the bridge didn't answer. */
++static int ps4_bridge_read_hpd(struct ps4_bridge *mn_bridge)
++{
++	int ret;
++	u8 reg;
++
++	mutex_lock(&mn_bridge->mutex);
++	cq_init(&mn_bridge->cq, 4);
++	cq_read(&mn_bridge->cq, TMONREG, 1);
++	ret = cq_exec(&mn_bridge->cq);
++	if (ret < ICC_REPLY_HEADER_SIZE + 1) {
++		mutex_unlock(&mn_bridge->mutex);
++		return -EIO;
++	}
++	reg = mn_bridge->cq.reply.databuf[0];
++	mutex_unlock(&mn_bridge->mutex);
++
++	if (mn_bridge->hpd_logged < 3) {
++		mn_bridge->hpd_logged++;
++		DRM_INFO("ps4_bridge: TMONREG=0x%02x (TV %s)\n", reg,
++			 reg & TMONREG_HPD ? "connected" : "not connected");
++	}
++	return !!(reg & TMONREG_HPD);
++}
++
++/*
++ * When a TV is unplugged or turned off, the bridge's HDMI side drops and
++ * nothing set it up again when the TV came back, leaving no picture. Check
++ * every 2 s; once the TV has been seen gone and then present twice in a row,
++ * run the bridge setup again. Readings that fail are ignored.
++ */
++static void ps4_bridge_hpd_work(struct work_struct *work)
++{
++	struct ps4_bridge *mn_bridge =
++		container_of(to_delayed_work(work), struct ps4_bridge, hpd_work);
++	bool wanted, enabled;
++	int hpd;
++
++	mutex_lock(&mn_bridge->mutex);
++	wanted = mn_bridge->mode && !mn_bridge->output_off &&
++		 !mn_bridge->enabling;
++	enabled = mn_bridge->enabled;
++	mutex_unlock(&mn_bridge->mutex);
++
++	hpd = wanted ? ps4_bridge_read_hpd(mn_bridge) : -EAGAIN;
++	if (hpd == 0) {
++		if (mn_bridge->hpd_last == 1)
++			DRM_INFO("ps4_bridge: TV disconnected\n");
++		mn_bridge->hpd_last = 0;
++		mn_bridge->hpd_rising = 0;
++	} else if (hpd == 1) {
++		/* Back after being gone, or here but never set up (TV was off
++		 * at boot or the last try failed): set up after two readings */
++		if ((mn_bridge->hpd_last == 0 || !enabled) &&
++		    ++mn_bridge->hpd_rising >= 2) {
++			DRM_INFO("ps4_bridge: TV connected; setting up HDMI output\n");
++			mutex_lock(&mn_bridge->mutex);
++			mn_bridge->enabled = false;
++			mutex_unlock(&mn_bridge->mutex);
++			ps4_bridge_enable(&mn_bridge->bridge);
++			mn_bridge->hpd_rising = 0;
++		}
++		mutex_lock(&mn_bridge->mutex);
++		enabled = mn_bridge->enabled;
++		mutex_unlock(&mn_bridge->mutex);
++		if (enabled)
++			mn_bridge->hpd_last = 1;
++	}
++
++	schedule_delayed_work(&mn_bridge->hpd_work, 2 * HZ);
++}
++
++static void ps4_bridge_stop_hpd(void *data)
++{
++	struct ps4_bridge *mn_bridge = data;
++
++	cancel_delayed_work_sync(&mn_bridge->hpd_work);
++}
++
+ int ps4_bridge_register(struct drm_connector *connector,
+ 			     struct drm_encoder *encoder)
+ {
+@@ -1468,5 +1563,12 @@ int ps4_bridge_register(struct drm_connector *connector,
+ 	if (ps4_bridge_is_baikal(mn_bridge))
+ 		ps4_bridge_baikal_init(mn_bridge);
+ 
++	mn_bridge->hpd_last = -1;
++	INIT_DELAYED_WORK(&mn_bridge->hpd_work, ps4_bridge_hpd_work);
++	ret = devm_add_action_or_reset(dev, ps4_bridge_stop_hpd, mn_bridge);
++	if (ret)
++		return ret;
++	schedule_delayed_work(&mn_bridge->hpd_work, 10 * HZ);
++
+ 	return 0;
+ }

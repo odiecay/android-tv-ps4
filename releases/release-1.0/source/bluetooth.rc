@@ -1,0 +1,12 @@
+# HCI sockets are available only in the initial Linux network namespace.
+# Init enters it before dropping to the existing Bluetooth service identity.
+service vendor.bluetooth-1-1 /vendor/bin/hw/android.hardware.bluetooth@1.1-service.vbt
+    interface android.hardware.bluetooth@1.1::IBluetoothHci default
+    interface android.hardware.bluetooth@1.0::IBluetoothHci default
+    class hal
+    enter_namespace net /dev/atv-host-netns
+    capabilities BLOCK_SUSPEND NET_ADMIN SYS_NICE
+    user bluetooth
+    group bluetooth
+    writepid /dev/stune/foreground/tasks
+    disabled

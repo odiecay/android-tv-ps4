@@ -1,0 +1,99 @@
+From 65922e445331a463eec3c29ca54b40cdf8cdec63 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 16:17:03 +1000
+Subject: [PATCH 29/31] drm/amdgpu/ps4_bridge: log what Slim/Pro reports need
+ at normal level: TV detected or not (on change), MN864729 setup retries and
+ failure, lane status after setup
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 37 +++++++++++++++++++------
+ 1 file changed, 28 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 13fe884fc..df9f84502 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -799,11 +799,11 @@ static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
+ 	cq_init(&mn_bridge->cq, 1);
+ 	cq_read(&mn_bridge->cq, 0x60f8, 2);
+ 	if (cq_exec(&mn_bridge->cq) >= ICC_REPLY_HEADER_SIZE + 2)
+-		DRM_DEBUG_KMS("mn864729: 0x60f8=0x%02x 0x60f9=0x%02x\n",
++		DRM_INFO("ps4_bridge: MN864729 set up, lane status 0x60f8=0x%02x 0x60f9=0x%02x\n",
+ 			      mn_bridge->cq.reply.databuf[0],
+ 			      mn_bridge->cq.reply.databuf[1]);
+ 	else
+-		DRM_DEBUG_KMS("mn864729: 0x60f8/0x60f9 readback failed\n");
++		DRM_INFO("ps4_bridge: MN864729 set up, lane status unreadable\n");
+ 
+ 	mutex_unlock(&mn_bridge->mutex);
+ 
+@@ -1019,9 +1019,10 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
+ 
+ 		for (attempt = 1; attempt <= PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS;
+ 		     attempt++) {
+-			DRM_DEBUG_KMS("ps4_bridge_enable: Belize attempt %u/%u\n",
+-				      attempt,
+-				      PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS);
++			if (attempt > 1)
++				DRM_INFO("ps4_bridge: MN864729 setup attempt %u/%u\n",
++					 attempt,
++					 PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS);
+ 
+ 			ret = ps4_bridge_enable_mn864729_video(mn_bridge, pdev);
+ 			if (!ret) {
+@@ -1038,6 +1039,9 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
+ 
+ 		if (success)
+ 			ps4_bridge_enable_mn864729_audio(mn_bridge);
++		else
++			DRM_ERROR("ps4_bridge: MN864729 setup failed after %u attempts\n",
++				  PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS);
+ 	}
+ 
+ out:
+@@ -1360,6 +1364,21 @@ int ps4_bridge_get_modes(struct drm_connector *connector)
+ 	return count;
+ }
+ 
++/* The connection state, logged when it changes (detect runs on every probe) */
++static enum drm_connector_status
++ps4_bridge_log_detect(enum drm_connector_status status, int dpcd_ret)
++{
++	static int last = -1;
++
++	if (status != last) {
++		DRM_INFO("ps4_bridge: TV %s (DPCD read %d)\n",
++			 status == connector_status_connected ? "detected" :
++			 "not detected", dpcd_ret);
++		last = status;
++	}
++	return status;
++}
++
+ enum drm_connector_status ps4_bridge_detect(struct drm_connector *connector,
+ 		bool force)
+ {
+@@ -1392,7 +1411,7 @@ enum drm_connector_status ps4_bridge_detect(struct drm_connector *connector,
+ 		      dig_connector ? dig_connector->dp_clock : 0);
+ 
+ 	if (!amdgpu_connector->ddc_bus || !amdgpu_connector->ddc_bus->has_aux)
+-		return connector_status_connected;
++		return ps4_bridge_log_detect(connector_status_connected, dpcd_ret);
+ 
+ 	/* Baikal: the internal link is fixed at 4 lanes @ 2.7 Gbps */
+ 	if (dpcd_ret != 0 && ps4_bridge_is_baikal(mn_bridge)) {
+@@ -1401,11 +1420,11 @@ enum drm_connector_status ps4_bridge_detect(struct drm_connector *connector,
+ 			dig_connector->dp_lane_count = 4;
+ 			dig_connector->dp_clock = 270000;
+ 		}
+-		return connector_status_connected;
++		return ps4_bridge_log_detect(connector_status_connected, dpcd_ret);
+ 	}
+ 
+-	return dpcd_ret == 0 ? connector_status_connected :
+-	       connector_status_disconnected;
++	return ps4_bridge_log_detect(dpcd_ret == 0 ? connector_status_connected :
++				     connector_status_disconnected, dpcd_ret);
+ }
+ 
+ enum drm_mode_status ps4_bridge_mode_valid(struct drm_connector *connector,

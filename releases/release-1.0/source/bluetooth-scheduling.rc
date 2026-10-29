@@ -1,0 +1,6 @@
+# This kernel enables RT_GROUP_SCHED. A zero foreground budget rejects
+# Bluetooth's SCHED_FIFO priority-1 timer thread, even with CAP_SYS_NICE.
+# Permit a bounded 100 ms per one-second period. Global RT throttling stays on.
+# post-fs-data follows cgroup creation and precedes the Android app runtime.
+on post-fs-data
+    write /dev/cpuctl/foreground/cpu.rt_runtime_us 100000

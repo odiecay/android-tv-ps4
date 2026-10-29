@@ -1,0 +1,10 @@
+service vendor.hwcomposer-2-1.drmfb /vendor/bin/hw/android.hardware.graphics.composer@2.1-drmfb-service
+    interface android.hardware.graphics.composer@2.1::IComposer drmfb
+    class hal animation
+    user system
+    group graphics drmrpc
+    capabilities SYS_NICE NET_ADMIN
+    setenv LD_PRELOAD /vendor/lib64/libatv-display-modes.so
+    onrestart restart surfaceflinger
+    writepid /dev/cpuset/system-background/tasks
+    disabled

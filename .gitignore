@@ -67,3 +67,19 @@ __pycache__/
 !/releases/release-1.0/kernel/baikal/*
 !/releases/release-1.0/kernel/android-usb-class/
 !/releases/release-1.0/kernel/android-usb-class/*
+
+# Android 16 v0.1 source and release provenance. Binary inputs remain external.
+!/releases/android16/**
+!/releases/release-1.0/setupwizard-overlay/**
+!/releases/release-1.0/controller/**
+/release-assets/
+/build/
+**/__pycache__/
+*.pyc
+*.o
+*.ko
+*.apk
+*.pkg
+*.pem
+*.pk8
+!/releases/release-1.0/source/*.rc

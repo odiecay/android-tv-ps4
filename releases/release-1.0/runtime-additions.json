@@ -1,5 +1,5 @@
 {
-  "comment": "Hardware-support files added by repack-runtime.py --additions DIR. DIR mirrors these paths; each file must match its SHA256. Files marked \"location\": \"drive\" go into mt7668-wifi.tar.gz, which the installer copies to the console drive, instead of the initramfs, so the boot loader's contiguous initramfs block stays the 1.0 size.",
+  "comment": "Exact v0.1 additions. Recover pinned binaries from the released PKG with releases/android16/scripts/extract-additions.py.",
   "files": {
     "lib/firmware/EEPROM_MT7668.bin": {
       "sha256": "d3ecac0fde5b66fab282cd97f43c04d77bf4fd6abdbd9c35c5d3d40e2f1f035a",
@@ -44,21 +44,12 @@
       "source": "github.com/noob404yt/mt7668-wifi-bt-firmware 6603884561c1b6b9fdc181504ed4a1188227ca6f",
       "location": "drive"
     },
-    "lib/modules/6.15.4-androidtv-ps4-aeolia/extra/psx_mts_net.ko": {
-      "sha256": "7f66b19e9cb89acd13f4a17b1efab148ead05446273b1e54fa8f45ac750ee3d3",
-      "source": "kernel/baikal/psx_mts_net.c (linux-psx Baikal Ethernet), built against the Baikal kernel"
-    },
-    "lib/modules/6.15.4-androidtv-ps4-aeolia/extra/wlan_mt76x8_sdio.ko": {
-      "sha256": "ddfa380957f991796ed882d3bef59607ee62a2f03de9b252d8fab008865fd7ac",
-      "source": "MT7668 Wi-Fi driver from the ps4-linux tree (drivers/net/wireless/mediatek/mt76x8), built as a module for 6.15.4-androidtv-ps4-aeolia with kernel/mt7668-proc-copy-bound.patch and kernel/mt7668-netns-ok.patch, debug symbols stripped",
-      "location": "drive"
-    },
     "opt/androidtv-ps4/AtvDeviceNameOverlay.apk": {
-      "sha256": "d002f8428d91cda7e0fd27e11b63d93ee7971bacdb6b651d17ae25457e59f6b7",
+      "sha256": "79242c6285ecd2e7151956e8112778155f73c62a892fe0832b4ca15b737b9fbf",
       "source": "name-overlay/ built by name-overlay/build.py, signed with the AOSP platform test key"
     },
     "opt/androidtv-ps4/AtvScreensaverOverlay.apk": {
-      "sha256": "9a04581cb48dbf24b509384dfdf3fe93d824aa753c9b09d58c4d4f8669922779",
+      "sha256": "70b41881d356246502455af17f2b8978e350a0a651f72d6d3198eb6aff0a9f44",
       "source": "screensaver-overlay/ built by name-overlay/build.py --source screensaver-overlay --name AtvScreensaverOverlay.apk, signed with the AOSP platform test key"
     },
     "usr/sbin/tune2fs": {
@@ -87,19 +78,50 @@
       "mode": "0644"
     },
     "opt/androidtv-ps4/xt_quota2.ko": {
-      "sha256": "d580a4d73287ebefbfaa660ac9b397f99fc3869598f88f609ef578c8473bd723",
-      "source": "quota2/xt_quota2.c rebuilt against the Android 16 dev kernel",
-      "mode": "0644"
-    },
-    "lib/modules/6.15.4-androidtv-ps4-aeolia/extra/xt_quota2.ko": {
-      "sha256": "d580a4d73287ebefbfaa660ac9b397f99fc3869598f88f609ef578c8473bd723",
+      "sha256": "c0e1867354c7592e7a273c41ca4fa91f3682ec81302ef753a79c06e510d6258e",
       "source": "quota2/xt_quota2.c rebuilt against the Android 16 dev kernel",
       "mode": "0644"
     },
     "opt/androidtv-ps4/android_usb_class.ko": {
-      "sha256": "8e1ab2b703cf91cc00b9d7eedd002279b54c074552e996bead36223436a07ee0",
+      "sha256": "70c64c3373278037063999f92b0e4791c23278afeacb8d691e5d559a293a6a77",
       "source": "android-usb-class/android_usb_class.c built against the Android 16 dev kernel",
       "mode": "0644"
+    },
+    "lib/modules/7.2.11-androidtv-ps4-a16+/extra/xt_quota2.ko": {
+      "source": "releases/android16/kernel/modules/quota2",
+      "mode": "0644",
+      "sha256": "c0e1867354c7592e7a273c41ca4fa91f3682ec81302ef753a79c06e510d6258e"
+    },
+    "lib/modules/7.2.11-androidtv-ps4-a16+/extra/psx_mts_net.ko": {
+      "source": "Linux kernel drivers/net/ethernet/psx_mts_net.c",
+      "mode": "0644",
+      "sha256": "6232bd45e5f3a74d31350fcf07c7b31210e0521998fe0465df29dd305150005b"
+    },
+    "lib/modules/7.2.11-androidtv-ps4-a16+/extra/wlan_mt76x8_sdio.ko": {
+      "source": "Linux kernel drivers/net/wireless/mediatek/mt76x8",
+      "mode": "0644",
+      "location": "drive",
+      "sha256": "90128b664a6d098dac7ff8bcddfc910267cf3bbc07d245ab42a5c2aeaac7bab6"
+    },
+    "opt/androidtv-ps4/AtvSetupWizardOverlay.apk": {
+      "source": "releases/release-1.0/setupwizard-overlay (AOSP platform test key)",
+      "mode": "0644",
+      "sha256": "1bd235d7bd63c647c2cf6c2224093146c6e66a3f2ca09b50c852432f1efdc429"
+    },
+    "opt/androidtv-ps4/Gboard-split_config.mdpi.apk": {
+      "source": "Gboard for TV 17.3.11 x86_64 density split",
+      "mode": "0644",
+      "sha256": "a131a0ac708b16336cd73552c0ebdbd55322cfabc895b803fc4436ea9f93843d"
+    },
+    "opt/androidtv-ps4/ps-button": {
+      "source": "releases/android16/tools/ps-button.c",
+      "mode": "0755",
+      "sha256": "f6cdac8c019a6fee4d896f253612c8f2684bd15d77cfbe6eb3d7bffe0bf53987"
+    },
+    "lib/firmware/edid/1920x1080.bin": {
+      "source": "Linux tools/edid generic 1080p60 EDID",
+      "mode": "0644",
+      "sha256": "78fae7bf275d9ac2acab158330acdbe4fe823f23453cee21503f70c638a6918e"
     }
   }
 }

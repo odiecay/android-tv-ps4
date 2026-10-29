@@ -1,0 +1,196 @@
+From 000c9f6ceb7b4fc165a3fbff56bc20e964b946ca Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:29:08 +1000
+Subject: [PATCH 24/31] psx_mts_net: native PCI autoload and first-open
+ publication (psX 6.18 MTS2 0002, used by the Baikal kernel that has run on
+ hardware)
+
+---
+ drivers/net/ethernet/Kconfig       |  9 +++--
+ drivers/net/ethernet/Makefile      |  2 +-
+ drivers/net/ethernet/psx_mts_net.c | 63 +++++++++++++++++++++++++-----
+ 3 files changed, 60 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/net/ethernet/Kconfig b/drivers/net/ethernet/Kconfig
+index 25fefee13..3bf3333b7 100644
+--- a/drivers/net/ethernet/Kconfig
++++ b/drivers/net/ethernet/Kconfig
+@@ -197,13 +197,14 @@ config PS4_MTS
+ 	default n
+ 	help
+ 	  Continuous polling netdevice for Sony Baikal 104d:90d8 only.
+-	  Select M for the isolated 6.18-baikal-mts2 target. Load psx_mts_net
+-	  after baikal_pcie, then arm its LIVE first-publication gate.
+-	  No modalias autoload. One code/DMA/map/reference generation stays
++	  Select M: udev loads psx_mts_net through its PCI alias, psx0
++	  appears once the module is LIVE, and the first open publishes.
++	  Boot with psx_mts_net.autoarm=0 to keep the explicit LIVE gate.
++	  One code/DMA/map/reference generation stays
+ 	  retained until power-off. Administrative down/up only changes CPU
+ 	  admission; background polling reclaims TX and discards RX while down.
+ 	  Fatal faults stop and retain permanently. No unload/reset recovery,
+ 	  suspend, IRQ, offload or configurable-PHY support is claimed.
+-	  Keep disabled for other targets pending hardware acceptance.
++	  Native autoload is development-only pending hardware acceptance.
+ 
+ endif # ETHERNET
+diff --git a/drivers/net/ethernet/Makefile b/drivers/net/ethernet/Makefile
+index 480003dc9..9bc355fc8 100644
+--- a/drivers/net/ethernet/Makefile
++++ b/drivers/net/ethernet/Makefile
+@@ -106,5 +106,5 @@ obj-$(CONFIG_NET_VENDOR_SYNOPSYS) += synopsys/
+ obj-$(CONFIG_NET_VENDOR_PENSANDO) += pensando/
+ obj-$(CONFIG_OA_TC6) += oa_tc6.o
+ 
+-# Default-off, explicitly loaded continuous PS4 Baikal module.
++# Continuous PS4 Baikal module; udev loads it through its PCI alias.
+ obj-$(CONFIG_PS4_MTS) += psx_mts_net.o
+diff --git a/drivers/net/ethernet/psx_mts_net.c b/drivers/net/ethernet/psx_mts_net.c
+index 2a5909579..fb60edaa4 100644
+--- a/drivers/net/ethernet/psx_mts_net.c
++++ b/drivers/net/ethernet/psx_mts_net.c
+@@ -91,6 +91,8 @@ struct mts_net {
+ 
+ static struct mts_net mts;
+ static struct pci_driver mts_driver;
++/* Native autoload: the first open arms itself unless booted with autoarm=0. */
++static bool autoarm = true;
+ 
+ static bool mts_identity(struct pci_dev *p, u16 id, unsigned int function)
+ {
+@@ -830,7 +832,7 @@ static int mts_open(struct net_device *ndev)
+ 		error = 0;
+ 		goto out;
+ 	}
+-	if (!s->allowed || s->attempted)
++	if (!(s->allowed || autoarm) || s->attempted)
+ 		goto out;
+ 	s->attempted = true;
+ 	s->allowed = false;
+@@ -1104,6 +1106,8 @@ module_param_cb(allow_open, &allow_ops, NULL, 0200);
+ MODULE_PARM_DESC(allow_open, "LIVE-only first-publication gate; write exactly1 after fresh-boot preflight");
+ module_param_cb(report, &report_ops, NULL, 0400);
+ MODULE_PARM_DESC(report, "Cached non-atomic diagnostic counters/state only; no hardware reads");
++module_param(autoarm, bool, 0444);
++MODULE_PARM_DESC(autoarm, "First open publishes without allow_open (default1); 0 keeps the explicit gate");
+ 
+ static void mts_release_unpublished(struct mts_net *s)
+ {
+@@ -1144,6 +1148,21 @@ static void mts_release_unpublished(struct mts_net *s)
+ 	}
+ }
+ 
++/* Makes psx0 visible. Never hold lifecycle here: ndo_open takes it under rtnl. */
++static int mts_register(struct mts_net *s)
++{
++	int error = register_netdev(s->ndev);
++
++	if (error) {
++		pr_err("netdevice registration refused error=%d; nothing published\n", error);
++		return error;
++	}
++	s->registered = true;
++	pr_info("REGISTERED %s %s\n", s->ndev->name,
++		autoarm ? "autoarm: first open publishes" : "open-gated");
++	return 0;
++}
++
+ static int mts_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ {
+ 	struct mts_net *s = &mts;
+@@ -1240,19 +1259,23 @@ static int mts_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 	netif_napi_add_weight(s->ndev, &s->napi, mts_poll, 64);
+ 	s->napi_added = true;
+ 	s->state = MTS_PROBED;
+-	s->reason = "probed-gated";
++	s->reason = autoarm ? "probed-autoarm" : "probed-gated";
+ 	s->bound = true;
+ 	pci_set_drvdata(pdev, s);
+ 	/* Unlock glue before making the gated interface visible. */
+ 	device_unlock(&s->glue->dev);
+ 	locked = false;
++	pr_info("PROBED inherited-MAC=%pM %s fresh-mask=%x\n", address,
++		autoarm ? "autoarm" : "open-gated", s->mac_mask);
++	/* A load-time probe leaves psx0 to the module LIVE notifier, so no open
++	 * can race initialization; a probe after LIVE registers immediately.
++	 */
++	if (READ_ONCE(THIS_MODULE->state) != MODULE_STATE_LIVE)
++		return 0;
+ 	stage = "netdevice-registration";
+-	error = register_netdev(s->ndev);
++	error = mts_register(s);
+ 	if (error)
+ 		goto fail;
+-	s->registered = true;
+-	pr_info("PROBED %s inherited-MAC=%pM open-gated fresh-mask=%x\n",
+-		s->ndev->name, address, s->mac_mask);
+ 	return 0;
+ fail:
+ 	pr_err("probe refused stage=%s error=%d published=%u\n",
+@@ -1306,6 +1329,7 @@ static void mts_shutdown(struct pci_dev *pdev)
+ static const struct pci_device_id mts_ids[] = {
+ 	{ PCI_DEVICE(0x104d, 0x90d8) }, {0}
+ };
++MODULE_DEVICE_TABLE(pci, mts_ids);
+ 
+ static int mts_pm_prepare(struct device *dev)
+ {
+@@ -1315,13 +1339,27 @@ static int mts_pm_prepare(struct device *dev)
+ }
+ 
+ static const struct dev_pm_ops mts_pm_ops = {.prepare = mts_pm_prepare};
+-/* Deliberately no MODULE_DEVICE_TABLE: explicit experimental loading only. */
++/* PCI alias autoload; probe and first open keep their fresh-boot checks. */
+ static struct pci_driver mts_driver = {
+ 	.name = MTS_DRIVER, .id_table = mts_ids, .probe = mts_probe,
+ 	.remove = mts_remove, .shutdown = mts_shutdown,
+ 	.driver = {.suppress_bind_attrs = true, .pm = &mts_pm_ops},
+ };
+ 
++static int mts_module_event(struct notifier_block *nb, unsigned long event, void *data)
++{
++	struct mts_net *s = &mts;
++	(void)nb;
++	if (event != MODULE_STATE_LIVE || data != THIS_MODULE)
++		return NOTIFY_DONE;
++	/* Probe finished inside init; unbind is suppressed and unload needs LIVE. */
++	if (s->bound && !s->registered && mts_register(s))
++		s->reason = "registration-refused";
++	return NOTIFY_DONE;
++}
++
++static struct notifier_block mts_module_nb = {.notifier_call = mts_module_event};
++
+ static int __init mts_init(void)
+ {
+ 	int error;
+@@ -1333,20 +1371,27 @@ static int __init mts_init(void)
+ 	INIT_WORK(&mts.stop_work, mts_stop_work);
+ 	hrtimer_setup(&mts.tick, mts_tick, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+ 	mts.reason = "absent";
+-	error = pci_register_driver(&mts_driver);
++	error = register_module_notifier(&mts_module_nb);
+ 	if (error)
+ 		return error;
++	error = pci_register_driver(&mts_driver);
++	if (error)
++		goto unregister_notifier;
+ 	if (!mts.bound) {
+ 		error = mts.probe_error ? mts.probe_error : -ENODEV;
+ 		pci_unregister_driver(&mts_driver);
+-		return error;
++		goto unregister_notifier;
+ 	}
+ 	return 0;
++unregister_notifier:
++	unregister_module_notifier(&mts_module_nb);
++	return error;
+ }
+ 
+ static void __exit mts_exit(void)
+ {
+ 	/* The permanent publication reference prevents normal entry when armed. */
++	unregister_module_notifier(&mts_module_nb);
+ 	pci_unregister_driver(&mts_driver);
+ 	cancel_work_sync(&mts.stop_work);
+ 	pr_info("unpublished unload only; force unload unsupported\n");

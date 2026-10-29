@@ -1,3 +1,5 @@
+> **Android 16 v0.1:** use [the Android 16 source guide](../releases/android16/README.md). The document below describes Android 13 / 1.1.
+
 # Architecture
 
 Android TV for PS4 has three execution environments: the native Orbis installer, the GoldHEN payload receiver, and Linux running Android. The launcher is an installer and boot controller. Linux takes over the hardware; Android runs on that kernel in its own namespaces.

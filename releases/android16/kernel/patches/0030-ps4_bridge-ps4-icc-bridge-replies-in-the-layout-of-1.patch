@@ -1,0 +1,176 @@
+From 070801083b9ce6164cf12175721fd871ed37092d Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 17:08:15 +1000
+Subject: [PATCH 30/31] ps4_bridge, ps4/icc: bridge replies in the layout of
+ 1.1's kernel and the psX Baikal kernel (result codes first, read data 8 bytes
+ in); psX 7.2's 0x14 offset read padding on a fat PS4, so hotplug always saw
+ no TV and the MN86471A DP status read was zeros
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 35 ++++++++++++++-----------
+ drivers/ps4/icc/i2c.c                   | 20 +++++---------
+ 2 files changed, 27 insertions(+), 28 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index df9f84502..c526256ab 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -151,7 +151,12 @@ struct i2c_cmd_hdr {
+ 	u8 count;
+ } __packed;
+ 
+-#define ICC_REPLY_HEADER_SIZE 0x14
++/* Reply layout as in 1.1's kernel and the psX Baikal kernel, both shown
++ * working on hardware: result codes first, read data from databuf[3]
++ * (8 bytes in). psX's 7.2 series moved it to 0x14 bytes in; on a fat PS4 that
++ * read padding (the HPD bit always 0 with a TV connected). */
++#define CQ_DATA(q) (&(q)->reply.databuf[3])
++#define CQ_READ_LEN(n) (8 + (n))
+ 
+ struct i2c_cmdqueue {
+ 	struct {
+@@ -161,10 +166,10 @@ struct i2c_cmdqueue {
+ 		u8 cmdbuf[0x7ec];
+ 	} __packed req;
+ 	struct {
+-		u8 pad0[0xc];
+ 		u8 res1, res2;
+-		u8 pad1[6];
+-		u8 databuf[0x7f0 - ICC_REPLY_HEADER_SIZE];
++		u8 unk1, unk2;
++		u8 count;
++		u8 databuf[0x7eb];
+ 	} __packed reply;
+ 
+ 	u8 *p;
+@@ -328,7 +333,7 @@ static int cq_exec(struct i2c_cmdqueue *q)
+ 	res = apcie_icc_cmd(0x10, 0, &q->req, q->req.length,
+ 		      &q->reply, sizeof(q->reply));
+ 
+-	if (res < ICC_REPLY_HEADER_SIZE) {
++	if (res < 5) {
+ 		DRM_ERROR("icc i2c commandqueue failed: %d\n", res);
+ 		return -EIO;
+ 	}
+@@ -468,7 +473,7 @@ static int ps4_bridge_read_edid_block_icc(void *data, u8 *buf,
+ 			mutex_unlock(&mn_bridge->mutex);
+ 			return -1;
+ 		}
+-		memcpy(seqbuf + i * EDID_SEQ_READ_COUNT, q->reply.databuf,
++		memcpy(seqbuf + i * EDID_SEQ_READ_COUNT, CQ_DATA(q),
+ 		       EDID_SEQ_READ_COUNT);
+ 	}
+ 
+@@ -698,8 +703,8 @@ static void ps4_bridge_baikal_stage(struct ps4_bridge *mn_bridge,
+ 		cq_read(&mn_bridge->cq, regs[i], 1);
+ 		rc = cq_exec(&mn_bridge->cq);
+ 		DRM_INFO("ps4_bridge: Baikal %s stage: 0x%04x=0x%02x (rc %d)\n",
+-			 stage, regs[i], rc >= ICC_REPLY_HEADER_SIZE + 1 ?
+-			 mn_bridge->cq.reply.databuf[0] : 0, rc);
++			 stage, regs[i], rc >= CQ_READ_LEN(1) ?
++			 CQ_DATA(&mn_bridge->cq)[0] : 0, rc);
+ 	}
+ 	cq_init(&mn_bridge->cq, 4);
+ }
+@@ -798,10 +803,10 @@ static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
+ 
+ 	cq_init(&mn_bridge->cq, 1);
+ 	cq_read(&mn_bridge->cq, 0x60f8, 2);
+-	if (cq_exec(&mn_bridge->cq) >= ICC_REPLY_HEADER_SIZE + 2)
++	if (cq_exec(&mn_bridge->cq) >= CQ_READ_LEN(2))
+ 		DRM_INFO("ps4_bridge: MN864729 set up, lane status 0x60f8=0x%02x 0x60f9=0x%02x\n",
+-			      mn_bridge->cq.reply.databuf[0],
+-			      mn_bridge->cq.reply.databuf[1]);
++			      CQ_DATA(&mn_bridge->cq)[0],
++			      CQ_DATA(&mn_bridge->cq)[1]);
+ 	else
+ 		DRM_INFO("ps4_bridge: MN864729 set up, lane status unreadable\n");
+ 
+@@ -899,12 +904,12 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
+ 
+ 		/* Read DisplayPort status (?) */
+ 		cq_read(&mn_bridge->cq, 0x76e1, 3);
+-		if (cq_exec(&mn_bridge->cq) < ICC_REPLY_HEADER_SIZE + 3) {
++		if (cq_exec(&mn_bridge->cq) < CQ_READ_LEN(3)) {
+ 			mutex_unlock(&mn_bridge->mutex);
+ 			DRM_ERROR("could not read DP status");
+ 			goto out;
+ 		}
+-		memcpy(dp, &mn_bridge->cq.reply.databuf[0], 3);
++		memcpy(dp, CQ_DATA(&mn_bridge->cq), 3);
+ 
+ 		cq_init(&mn_bridge->cq, 4);
+ 
+@@ -1501,11 +1506,11 @@ static int ps4_bridge_read_hpd(struct ps4_bridge *mn_bridge)
+ 	cq_init(&mn_bridge->cq, 4);
+ 	cq_read(&mn_bridge->cq, TMONREG, 1);
+ 	ret = cq_exec(&mn_bridge->cq);
+-	if (ret < ICC_REPLY_HEADER_SIZE + 1) {
++	if (ret < CQ_READ_LEN(1)) {
+ 		mutex_unlock(&mn_bridge->mutex);
+ 		return -EIO;
+ 	}
+-	reg = mn_bridge->cq.reply.databuf[0];
++	reg = CQ_DATA(&mn_bridge->cq)[0];
+ 	mutex_unlock(&mn_bridge->mutex);
+ 
+ 	if (mn_bridge->hpd_logged < 3) {
+diff --git a/drivers/ps4/icc/i2c.c b/drivers/ps4/icc/i2c.c
+index b79a2fd17..e4c801b8f 100644
+--- a/drivers/ps4/icc/i2c.c
++++ b/drivers/ps4/icc/i2c.c
+@@ -7,9 +7,6 @@
+ #define ICC_MAX_READ_DATA 0xff
+ #define ICC_MAX_WRITE_DATA 0xf8
+ 
+-#define ICC_REPLY_HEADER_SIZE 0x14
+-#define ICC_REPLY_ERROR_OFF 0x0c
+-
+ u32 icc_i2c_functionality(struct i2c_adapter *adap);
+ int icc_i2c_init(struct apcie_dev *sc);
+ void icc_i2c_remove(struct apcie_dev *sc);
+@@ -44,7 +41,7 @@ static int icc_i2c_smbus_xfer(struct i2c_adapter *adapter, u16 addr,
+ 	struct apcie_dev *sc = i2c_get_adapdata(adapter);
+ 	int ret;
+ 	struct icc_i2c_msg msg;
+-	u8 resultbuf[ICC_REPLY_HEADER_SIZE + ICC_MAX_READ_DATA];
++	u8 resultbuf[8 + ICC_MAX_READ_DATA];
+ 
+ 	msg.code = 4; /* Don't really know what this is */
+ 	msg.count = 1;
+@@ -98,29 +95,26 @@ static int icc_i2c_smbus_xfer(struct i2c_adapter *adapter, u16 addr,
+ 	msg.length = msg.cmd.length + 4;
+ 	ret = apcie_icc_cmd(0x10, 0x0, &msg, msg.length, resultbuf,
+ 		      sizeof(resultbuf));
+-	if (ret < ICC_REPLY_HEADER_SIZE || ret > sizeof(resultbuf)) {
++	if (ret < 2 || ret > sizeof(resultbuf)) {
+ 		sc_err("icc-i2c: icc command failed: %d\n", ret);
+ 		return -EIO;
+ 	}
+-	if (resultbuf[ICC_REPLY_ERROR_OFF] != 0 ||
+-	    resultbuf[ICC_REPLY_ERROR_OFF + 1] != 0) {
++	if (resultbuf[0] != 0 || resultbuf[1] != 0) {
+ 		sc_err("icc-i2c: i2c command failed: %d, %d\n",
+-		       resultbuf[ICC_REPLY_ERROR_OFF],
+-		       resultbuf[ICC_REPLY_ERROR_OFF + 1]);
++		       resultbuf[0], resultbuf[1]);
+ 		return -EIO;
+ 	}
+ 
+ 	if (read_write == I2C_SMBUS_READ)
+ 		switch (size) {
+ 		case I2C_SMBUS_BYTE_DATA:
+-			data->byte = resultbuf[ICC_REPLY_HEADER_SIZE];
++			data->byte = resultbuf[8];
+ 			break;
+ 		case I2C_SMBUS_WORD_DATA:
+-			data->word = resultbuf[ICC_REPLY_HEADER_SIZE] |
+-				     (resultbuf[ICC_REPLY_HEADER_SIZE + 1] << 8);
++			data->word = resultbuf[8] | (resultbuf[9] << 8);
+ 			break;
+ 		case I2C_SMBUS_I2C_BLOCK_DATA:
+-			memcpy(&data->block[1], &resultbuf[ICC_REPLY_HEADER_SIZE],
++			memcpy(&data->block[1], &resultbuf[8],
+ 			       data->block[0]);
+ 			break;
+ 		}

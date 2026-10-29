@@ -1,0 +1,70 @@
+From 4fb24104cfd4d4b8696d26d84d0712ff0ff17e08 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:27:55 +1000
+Subject: [PATCH 22/31] Baikal: AMD IOMMU init as in the psX Baikal kernel that
+ has run on hardware; drop the untested Baikal skip/preserve paths (psX: the
+ skip ran before PCI enumeration and never applied)
+
+---
+ drivers/iommu/amd/init.c | 27 ++++-----------------------
+ 1 file changed, 4 insertions(+), 23 deletions(-)
+
+diff --git a/drivers/iommu/amd/init.c b/drivers/iommu/amd/init.c
+index 07cc1eb34..8165462a2 100644
+--- a/drivers/iommu/amd/init.c
++++ b/drivers/iommu/amd/init.c
+@@ -13,7 +13,6 @@
+ #include <linux/list.h>
+ #include <linux/bitmap.h>
+ #include <linux/syscore_ops.h>
+-#include <asm/ps4.h>
+ #include <linux/interrupt.h>
+ #include <linux/msi.h>
+ #include <linux/irq.h>
+@@ -1961,18 +1960,10 @@ static int __init init_iommu_one_late(struct amd_iommu *iommu)
+ 
+ 	init_translation_status(iommu);
+ 	if (translation_pre_enabled(iommu) && !is_kdump_kernel()) {
+-#ifdef CONFIG_X86_PS4
+-		if (ps4_is_baikal()) {
+-			pr_info("AMD-Vi: PS4 Baikal: IOMMU:%d pre-enabled, preserving state\n",
+-				iommu->index);
+-		} else
+-#endif
+-		{
+-			iommu_disable(iommu);
+-			clear_translation_pre_enabled(iommu);
+-			pr_warn("Translation was enabled for IOMMU:%d but we are not in kdump mode\n",
+-				iommu->index);
+-		}
++		iommu_disable(iommu);
++		clear_translation_pre_enabled(iommu);
++		pr_warn("Translation was enabled for IOMMU:%d but we are not in kdump mode\n",
++			iommu->index);
+ 	}
+ 	if (amd_iommu_pre_enabled)
+ 		amd_iommu_pre_enabled = translation_pre_enabled(iommu);
+@@ -3312,11 +3303,6 @@ static int __init early_amd_iommu_init(void)
+ 	}
+ 
+ 	/* Disable any previously enabled IOMMUs */
+-#ifdef CONFIG_X86_PS4
+-	if (amd_iommu_pre_enabled && ps4_is_baikal()) {
+-		pr_info("AMD-Vi: PS4 Baikal: keeping IOMMU enabled to preserve IR tables\n");
+-	} else
+-#endif
+ 	if (!is_kdump_kernel() || amd_iommu_disabled)
+ 		disable_iommus();
+ 
+@@ -3701,11 +3687,6 @@ void __init amd_iommu_detect(void)
+ {
+ 	int ret;
+ 
+-#ifdef CONFIG_X86_PS4
+-	if (ps4_is_baikal())
+-		goto disable_snp;
+-#endif
+-
+ 	if (no_iommu || (iommu_detected && !gart_iommu_aperture))
+ 		goto disable_snp;
+ 

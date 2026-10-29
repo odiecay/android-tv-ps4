@@ -1,0 +1,77 @@
+From 3bbefee23c5004afd887fdfeaca873b18fd915ef Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 13:13:40 +1000
+Subject: [PATCH 15/31] ps4-bpcie-icc: check the ICC status between short waits
+ and handle a reply whose interrupt never arrived (6.15 Baikal needed polling
+ for ICC; ICC programs the HDMI bridge)
+
+---
+ drivers/ps4/ps4-bpcie-icc.c | 45 ++++++++++++++++++++++++++++++++-----
+ 1 file changed, 39 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/ps4/ps4-bpcie-icc.c b/drivers/ps4/ps4-bpcie-icc.c
+index 5aba26a42..f5f34e7d1 100644
+--- a/drivers/ps4/ps4-bpcie-icc.c
++++ b/drivers/ps4/ps4-bpcie-icc.c
+@@ -167,9 +167,26 @@ static irqreturn_t icc_interrupt(int irq, void *arg)
+ 	return ret;
+ }
+ 
++/* Handles a pending ICC event when its interrupt did not arrive. The
++ * interrupt is held off meanwhile so the handler never runs twice. */
++static void icc_poll(struct bpcie_dev *sc)
++{
++	unsigned int irq = bpcie_irqnum(sc, BPCIE_SUBFUNC_ICC);
++
++	if (!(ioread32(sc->bar2 + BPCIE_REG_ICC_STATUS) &
++	      (BPCIE_ICC_SEND | BPCIE_ICC_ACK)))
++		return;
++	disable_irq(irq);
++	if (icc_interrupt(irq, sc) == IRQ_HANDLED)
++		dev_warn_once(&sc->pdev->dev,
++			      "icc: event found by polling; its interrupt was not delivered\n");
++	enable_irq(irq);
++}
++
+ static int _bpcie_icc_cmd(struct bpcie_dev *sc, u8 major, u16 minor, const void *data,
+ 		    u16 length, void *reply, u16 reply_length, bool intr)
+ {
++	unsigned long deadline;
+ 	int ret;
+ 	u32 req_empty, req_full;
+ 	u16 rep_checksum;
+@@ -216,12 +233,28 @@ static int _bpcie_icc_cmd(struct bpcie_dev *sc, u8 major, u16 minor, const void
+ 
+ 	iowrite32(BPCIE_ICC_SEND, sc->bar2 + BPCIE_REG_ICC_DOORBELL);
+ 
+-	if (intr)
+-		ret = wait_event_interruptible_timeout(sc->icc.wq,
+-				!sc->icc.reply_pending, HZ * ICC_TIMEOUT);
+-	else
+-		ret = wait_event_timeout(sc->icc.wq,
+-				!sc->icc.reply_pending, HZ * ICC_TIMEOUT);
++	/* Wait for the reply interrupt in short slices and check the status
++	 * register in between. On the 6.15 Baikal kernel the southbridge set
++	 * the reply but the interrupt never arrived, and polling was the only
++	 * way ICC worked; without ICC the HDMI bridge can't be programmed. */
++	deadline = jiffies + HZ * ICC_TIMEOUT;
++	for (;;) {
++		if (intr)
++			ret = wait_event_interruptible_timeout(sc->icc.wq,
++					!sc->icc.reply_pending, msecs_to_jiffies(10));
++		else
++			ret = wait_event_timeout(sc->icc.wq,
++					!sc->icc.reply_pending, msecs_to_jiffies(10));
++		if (ret)
++			break;
++		icc_poll(sc);
++		if (!READ_ONCE(sc->icc.reply_pending)) {
++			ret = 1;
++			break;
++		}
++		if (time_after(jiffies, deadline))
++			break;
++	}
+ 
+ 	spin_lock_irq(&sc->icc.reply_lock);
+ 	sc->icc.reply_buffer = NULL;

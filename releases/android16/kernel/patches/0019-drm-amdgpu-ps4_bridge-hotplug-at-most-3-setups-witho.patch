@@ -1,0 +1,42 @@
+From 7ec99b37d19910f90c51b5f853360b0c8b5a0940 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:16:20 +1000
+Subject: [PATCH 19/31] drm/amdgpu/ps4_bridge: hotplug: at most 3 setups
+ without a replug, so a bridge that reports failure while showing a picture
+ isn't reset every few seconds
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 51ca4bbfd..47da19985 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -190,6 +190,7 @@ struct ps4_bridge {
+ 	bool output_off;	/* display turned off on purpose */
+ 	int hpd_last;
+ 	unsigned int hpd_rising;
++	unsigned int hpd_retries;	/* setups tried without a replug */
+ 	unsigned int hpd_logged;
+ };
+ 
+@@ -1489,11 +1490,16 @@ static void ps4_bridge_hpd_work(struct work_struct *work)
+ 			DRM_INFO("ps4_bridge: TV disconnected\n");
+ 		mn_bridge->hpd_last = 0;
+ 		mn_bridge->hpd_rising = 0;
++		mn_bridge->hpd_retries = 0;
+ 	} else if (hpd == 1) {
+ 		/* Back after being gone, or here but never set up (TV was off
+-		 * at boot or the last try failed): set up after two readings */
+-		if ((mn_bridge->hpd_last == 0 || !enabled) &&
++		 * at boot or the last try failed): set up after two readings.
++		 * Without a replug, give up after 3 tries, so a bridge that
++		 * reports failure while showing a picture isn't reset forever. */
++		if ((mn_bridge->hpd_last == 0 ||
++		     (!enabled && mn_bridge->hpd_retries < 3)) &&
+ 		    ++mn_bridge->hpd_rising >= 2) {
++			mn_bridge->hpd_retries++;
+ 			DRM_INFO("ps4_bridge: TV connected; setting up HDMI output\n");
+ 			mutex_lock(&mn_bridge->mutex);
+ 			mn_bridge->enabled = false;

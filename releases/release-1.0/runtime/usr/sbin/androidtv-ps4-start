@@ -74,6 +74,20 @@ hardware_report() {
   elif dmesg | grep -q 'Initialized amdgpu'; then echo " Verdict: the GPU driver started but no picture was set up."
   elif [ -n "$gpu" ]; then echo " Verdict: the GPU was found but its driver failed; the lines above show where."
   else echo " Verdict: no GPU driver activity."; fi
+  # Where a Slim or Pro start stopped: the kernel lines for each part, so the
+  # report shows the step without reading the whole kernel log.
+  echo; echo "Settings in effect:"
+  for p in libahci/parameters/ps4_ahci_poll_ms ps4_bpcie/parameters/ps4_sata_phy_orbit; do
+   [ -r "/sys/module/$p" ] && echo " ${p%%/*}.${p##*/}=$(cat "/sys/module/$p")"
+  done
+  echo; echo "Southbridge and IOMMU (kernel):"
+  dmesg | grep -E 'southbridge id|AMD-Vi:|iommu: Default|(apcie|bpcie|icc).*(fail|error|timeout|not ready|mismatch)' | tail -15 | sed 's/^/ /'
+  echo; echo "Internal drive link (kernel):"
+  dmesg | grep -E 'ata[0-9]+(\.[0-9]+)?: |ahci [0-9a-f:.]+: |SATA PHY|sd [0-9:]+: \[sd[a-z]+\] [0-9]+ .*blocks' | tail -30 | sed 's/^/ /'
+  echo; echo "HDMI bridge (kernel):"
+  dmesg | grep -E 'ps4_bridge|MN864729|MN86471A|ps4 crtc|dp_extclk|icc i2c' | grep -v 'ps4_bridge: mode ' | tail -30 | sed 's/^/ /'
+  echo; echo "Ethernet (kernel):"
+  dmesg | grep -E 'sky2|psx_mts|psx0' | tail -10 | sed 's/^/ /'
   echo; echo "Bluetooth: $(ls /sys/class/bluetooth 2>/dev/null | tr '\n' ' ')"
   echo "Loaded modules:"; cut -d' ' -f1 /proc/modules 2>/dev/null | sed 's/^/ /'
   echo; echo "Driver and setup decisions:"; grep -E 'found|driver|GPU|Southbridge|Hardware|Wi-Fi|Ethernet|failed' /run/androidtv-ps4/progress.log 2>/dev/null || true
@@ -100,10 +114,24 @@ copy_logs() {
  dmesg > "$1/kernel.log" 2>/dev/null || true
  if [ -n "$installation" ] && [ "$1" != "$installation/logs" ]; then
   cp "$installation/logs/launcher.log" "$1/" 2>/dev/null || true
+  # The last start's full logs, so a start that hung before they reached the
+  # stick still gets them there on the next one.
+  if [ -z "${USB_LIGHT:-}" ] && [ -d "$installation/logs/previous" ]; then
+   mkdir -p "$1/previous" && cp -r "$installation/logs/previous/." "$1/previous/" 2>/dev/null || true
+  fi
  fi
  sync
 }
+# Android checks (fsck) and mounts USB sticks itself. Mounting a stick from
+# here while Android does that writes to it twice at once and corrupts it, so
+# while Android runs, logs only go through Android's own mount of the stick.
+android_running() {
+ [ -f /run/androidtv-ps4/android-launched ] || return 1
+ atv_init=$(cat /run/androidtv-ps4/android-init.pid 2>/dev/null)
+ [ -n "$atv_init" ] && [ -d "/proc/$atv_init" ]
+}
 export_reports() {
+ if android_running; then usb_mirror; return; fi
  for block in /sys/class/block/sd*; do
   name=${block##*/}
   # A whole stick with partitions: use the partition, not the disk, or the
@@ -145,6 +173,7 @@ usb_mirror() {
    copy_logs "/proc/$init_pid/root$android_mount/AndroidTV-PS4-logs" && return 0
    continue
   fi
+  ! android_running || continue
   mkdir -p /mnt/usb-report
   mount -t vfat "/dev/$name" /mnt/usb-report 2>/dev/null || mount -t exfat "/dev/$name" /mnt/usb-report 2>/dev/null || continue
   copy_logs /mnt/usb-report/AndroidTV-PS4-logs
@@ -158,7 +187,7 @@ stop_safely() {
  # Stop the background log copy before the drive is unmounted.
  kill "$(cat /run/androidtv-ps4/keep-logs.pid 2>/dev/null)" 2>/dev/null || true
  sync
- for mount in /mnt/android-bundled-apps /mnt/android-persistent /android /mnt/android-lower /mnt/android-sfs /mnt/android-share /mnt/ps4-user; do
+ for mount in /mnt/android-bundled-apps /mnt/android-persistent /android/system/product/app/Gboard/Gboard.apk /android /mnt/android-lower /mnt/android-sfs /mnt/android-share /mnt/ps4-user; do
   umount "$mount" 2>/dev/null || true
  done
  cryptsetup close ps4-android-user 2>/dev/null || true
@@ -221,15 +250,19 @@ for device in /sys/bus/pci/devices/*; do
  esac
 done
 stage "Southbridge: $southbridge"
+# Baikal's SATA can need several resets and a slower link before the drive
+# answers, which takes longer than a minute; wait up to three minutes there.
+disk_wait=60
+[ "$southbridge" != baikal ] || disk_wait=180
 stage 'Waiting for internal PS4 disk'
 userpart=
-for attempt in $(seq 1 60); do
+for attempt in $(seq 1 "$disk_wait"); do
  userpart=$(internal_disk || true)
  [ -z "$userpart" ] || break
  if [ "$((attempt % 5))" = 0 ]; then stage "Still waiting for internal disk ($attempt seconds)"; fi
  sleep 1
 done
-[ -n "$userpart" ] || { stage 'Internal disk did not appear within 60 seconds'; exit 1; }
+[ -n "$userpart" ] || { stage "Internal disk did not appear within $disk_wait seconds"; exit 1; }
 stage 'Opening internal PS4 storage (disk encryption and filesystem)'
 [ -r /key/eap_hdd_key.bin ]
 # One line describing this console's hardware, for test reports.
@@ -363,7 +396,9 @@ keep_logs() {
    stage 'Android started; logs saved, logging stopped'
    hardware_report
    copy_logs "$installation/logs"
-   usb_mirror || true
+   # Android mounts a USB stick shortly after it has booted; wait for that
+   # (up to a minute) and save the final logs through its mount.
+   for wait_usb in $(seq 1 60); do usb_mirror && break; sleep 1; done
    break
   fi
  done
@@ -371,6 +406,8 @@ keep_logs() {
  # log that says why, to the logs folder and to a USB stick if one is in.
  if [ -f /run/androidtv-ps4/power-request ]; then
   stage "Android stopped ($(cat /run/androidtv-ps4/power-request)); saving final logs"
+  # Give Android up to 15 seconds to finish stopping and release the stick.
+  for wait_android in $(seq 1 15); do android_running || break; sleep 1; done
   hardware_report
   copy_logs "$installation/logs"
   export_reports || true
@@ -475,6 +512,21 @@ fi
 sed -i '/<permission name="android.permission.MANAGE_VIRTUAL_MACHINE">/,/<\/permission>/d' /android/system/etc/permissions/platform.xml
 ! grep -q '"virtualmachine"' /android/system/etc/permissions/platform.xml || stage 'Warning: could not remove the virtualmachine group mapping'
 cp "$assets/init.sh" /android/system/etc/init.sh
+# Gboard is a system app, there from the first second, so setup's Google
+# sign-in has a real keyboard; installed later with the bundled apps it came
+# minutes too late and voice typing was the keyboard. Gboard for TV is the
+# base APK in the image (bind-mounted, no copy in RAM) plus a density split.
+gboard_apk=/mnt/android-lower/system/etc/user_app/Gboard.apk
+if [ -f "$gboard_apk" ]; then
+ mkdir -p /android/system/product/app/Gboard
+ touch /android/system/product/app/Gboard/Gboard.apk
+ mount --bind "$gboard_apk" /android/system/product/app/Gboard/Gboard.apk
+ cp "$assets/Gboard-split_config.mdpi.apk" /android/system/product/app/Gboard/split_config.mdpi.apk
+ chmod 644 /android/system/product/app/Gboard/split_config.mdpi.apk
+ rm -f /android/system/etc/user_app/Gboard.apk
+else
+ stage 'Warning: Gboard not found in the system image'
+fi
 cp "$assets/androidtv-ps4.rc" /android/system/etc/init/androidtv-ps4.rc
 # OpenGL ES shaders are compiled with ACO, the compiler Vulkan uses. Mesa's
 # default (LLVM) emits a copy for every value carried around a loop on this

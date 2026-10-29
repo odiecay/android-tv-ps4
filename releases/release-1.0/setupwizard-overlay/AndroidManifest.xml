@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.androidtvps4.overlay.setupwizard" android:versionCode="1" android:versionName="1.0">
+ <overlay android:targetPackage="org.lineageos.setupwizard" android:isStatic="true" android:priority="50"/>
+ <application android:hasCode="false"/>
+</manifest>

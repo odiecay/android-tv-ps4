@@ -13,6 +13,10 @@ Thanks for wanting to help. This started as one person tinkering with one PS4, a
 
 Open the file on GitHub, click the **pencil icon** (Edit this file), make your change and choose **Propose changes**. GitHub copies the repository to your account and opens a pull request for you. No Git or command line needed.
 
+## Android 16 v0.1
+
+Use [the v0.1 source guide](releases/android16/README.md) for the released Android 16 package, kernel source, build instructions and hardware status. The mapping below also covers the shared launcher/runtime layout.
+
 ## Where things live
 
 All the source is in [`releases/release-1.0/`](releases/release-1.0/) (the folder name predates 1.1). Read [How it works](docs/DEVELOPMENT.md) first, then [Build it](docs/BUILD.md).

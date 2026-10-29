@@ -1,0 +1,16 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.androidtvps4.controller" android:versionCode="1" android:versionName="1.0">
+ <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33"/>
+ <uses-permission android:name="android.permission.INJECT_EVENTS"/>
+ <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/>
+ <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+ <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
+ <application android:label="PS4 controller buttons" android:allowBackup="false">
+  <service android:name=".ControllerService" android:exported="true" android:label="PS4 controller buttons" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+   <intent-filter><action android:name="android.accessibilityservice.AccessibilityService"/></intent-filter>
+   <meta-data android:name="android.accessibilityservice" android:resource="@xml/controller_service"/>
+  </service>
+  <receiver android:name=".EnableReceiver" android:exported="true">
+   <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter>
+  </receiver>
+ </application>
+</manifest>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android TV for PS4 16 dev: privileged permissions the WayDroid-ATV
+     MindTheGapps (baklava) allowlist misses. Android 16 stops system_server
+     at boot when a privileged app asks for one that isn't listed. -->
+<permissions>
+    <privapp-permissions package="com.android.vending">
+        <permission name="android.permission.HIDE_STATUS_BAR_NOTIFICATION"/>
+    </privapp-permissions>
+</permissions>

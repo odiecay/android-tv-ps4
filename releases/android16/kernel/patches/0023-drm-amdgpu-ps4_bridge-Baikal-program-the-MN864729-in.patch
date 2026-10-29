@@ -1,0 +1,70 @@
+From b579dc5a4a51fa232503fb36f9d9be81495bc65a Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 15:29:07 +1000
+Subject: [PATCH 23/31] drm/amdgpu/ps4_bridge: Baikal: program the MN864729 in
+ three stages with readbacks (lane, HDMI update, PLL/finalize); as one queue
+ the bridge reports success but shows no image (psX A38/0036)
+
+---
+ drivers/gpu/drm/amd/amdgpu/ps4_bridge.c | 31 +++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+index 47da19985..2695cd052 100644
+--- a/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
++++ b/drivers/gpu/drm/amd/amdgpu/ps4_bridge.c
+@@ -682,9 +682,32 @@ static void ps4_bridge_reset_mn864729(struct ps4_bridge *mn_bridge)
+ 	mutex_unlock(&mn_bridge->mutex);
+ }
+ 
++/* Baikal: run the queued bridge commands now, read back the registers they
++ * waited on, and start a new queue. Called with mn_bridge->mutex held. */
++static void ps4_bridge_baikal_stage(struct ps4_bridge *mn_bridge,
++				    const char *stage, u16 reg0, u16 reg1)
++{
++	u16 regs[2] = { reg0, reg1 };
++	int i, rc;
++
++	rc = cq_exec(&mn_bridge->cq);
++	if (rc < 0)
++		DRM_ERROR("ps4_bridge: Baikal %s stage failed (%d)\n", stage, rc);
++	for (i = 0; i < 2 && regs[i]; i++) {
++		cq_init(&mn_bridge->cq, 4);
++		cq_read(&mn_bridge->cq, regs[i], 1);
++		rc = cq_exec(&mn_bridge->cq);
++		DRM_INFO("ps4_bridge: Baikal %s stage: 0x%04x=0x%02x (rc %d)\n",
++			 stage, regs[i], rc >= ICC_REPLY_HEADER_SIZE + 1 ?
++			 mn_bridge->cq.reply.databuf[0] : 0, rc);
++	}
++	cq_init(&mn_bridge->cq, 4);
++}
++
+ static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
+ 					    struct pci_dev *pdev)
+ {
++	bool baikal = ps4_bridge_is_baikal(mn_bridge);
+ 	int ret;
+ 
+ 	mutex_lock(&mn_bridge->mutex);
+@@ -697,6 +720,12 @@ static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
+ 	cq_wait_set(&mn_bridge->cq, 0x60f9, 0x01);
+ 	cq_writereg(&mn_bridge->cq, 0x6a01, 0x4d);
+ 	cq_wait_set(&mn_bridge->cq, 0x60f9, 0x1a);
++	/* Baikal: run each stage on its own and read back what it waited
++	 * for. As one queue the bridge reports success but the TV gets no
++	 * image (psX experiment A38); the staged form is the one that showed
++	 * a picture (v60, psX 0036). */
++	if (baikal)
++		ps4_bridge_baikal_stage(mn_bridge, "lane", 0x60f8, 0x60f9);
+ 
+ 	cq_mask(&mn_bridge->cq, 0x1e00, 0x00, 0x21);
+ 	cq_mask(&mn_bridge->cq, 0x1e02, 0x00, 0x70);
+@@ -747,6 +776,8 @@ static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
+ 	//cq_writereg(&mn_bridge->cq, 0x7a00, 0x0e);
+ 
+ 	cq_wait_set(&mn_bridge->cq, 0x10f6, 0x80);
++	if (baikal)
++		ps4_bridge_baikal_stage(mn_bridge, "hdmi-update", 0x10f6, 0);
+ 	cq_mask(&mn_bridge->cq, 0x7226, 0x00, 0x80);
+ 	cq_mask(&mn_bridge->cq, 0x7228, 0x00, 0xFF);
+ 	// rancido has no delay here vvv

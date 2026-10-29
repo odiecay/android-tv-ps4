@@ -1,0 +1,604 @@
+From 94b9aa2a848100bd62715cee313012cf44d405b4 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Tue, 27 Oct 2026 14:52:57 +1000
+Subject: [PATCH 03/31] Android TV for PS4 16: Pro primary formats, memfd
+ ashmem shim, BPF JIT sysctls per netns, MT7668 netns
+
+---
+ drivers/gpu/drm/amd/amdgpu/dce_v8_0.c         |  55 ++++-
+ .../drv_wlan/MT6632/wlan/os/linux/gl_init.c   |   2 +
+ .../drv_wlan/MT6632/wlan/os/linux/gl_p2p.c    |   1 +
+ mm/Kconfig                                    |   9 +
+ mm/Makefile                                   |   1 +
+ mm/memfd-ashmem-shim-internal.h               |  52 +++++
+ mm/memfd-ashmem-shim.c                        | 213 ++++++++++++++++++
+ mm/memfd-ashmem-shim.h                        |  21 ++
+ mm/shmem.c                                    |  10 +
+ net/core/sysctl_net_core.c                    |  94 ++++++++
+ 10 files changed, 457 insertions(+), 1 deletion(-)
+ create mode 100644 mm/memfd-ashmem-shim-internal.h
+ create mode 100644 mm/memfd-ashmem-shim.c
+ create mode 100644 mm/memfd-ashmem-shim.h
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c b/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
+index 22c68c920..154a5a272 100644
+--- a/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
++++ b/drivers/gpu/drm/amd/amdgpu/dce_v8_0.c
+@@ -26,6 +26,7 @@
+ #include <drm/drm_modeset_helper.h>
+ #include <drm/drm_modeset_helper_vtables.h>
+ #include <drm/drm_vblank.h>
++#include <drm/drm_plane_helper.h>
+ 
+ #include "amdgpu.h"
+ #include "amdgpu_pm.h"
+@@ -2647,16 +2648,68 @@ static const struct drm_plane_helper_funcs dce_v8_0_drm_primary_plane_helper_fun
+ 	.panic_flush = dce_v8_0_panic_flush,
+ };
+ 
++/* The PS4 display engine supports both channel orders in
++ * dce_v8_0_crtc_do_set_base().
++ * drm_crtc_init() advertises only XRGB/ARGB, which makes the modern framebuffer
++ * verifier reject Android's XBGR buffers before reaching that hardware code.
++ * Give the PS4 GPUs their own accurate primary-plane formats; retain
++ * validation. Liverpool (fat, Slim) and Gladius (Pro) share this DCE 8 path.
++ */
++static bool dce_v8_0_is_ps4_gpu(struct amdgpu_device *adev)
++{
++	return adev->asic_type == CHIP_LIVERPOOL || adev->asic_type == CHIP_GLADIUS;
++}
++
++static const uint32_t ps4_primary_formats[] = {
++	DRM_FORMAT_XRGB8888, DRM_FORMAT_ARGB8888,
++	DRM_FORMAT_XBGR8888, DRM_FORMAT_ABGR8888,
++};
++
++static const struct drm_plane_funcs ps4_primary_funcs = {
++	DRM_PLANE_NON_ATOMIC_FUNCS,
++};
++
++static int ps4_crtc_init(struct drm_device *dev, struct drm_crtc *crtc,
++			       const struct drm_crtc_funcs *funcs)
++{
++	struct drm_plane *primary;
++	int ret;
++
++	primary = __drm_universal_plane_alloc(dev, sizeof(*primary), 0, 0,
++					      &ps4_primary_funcs,
++					      ps4_primary_formats,
++					      ARRAY_SIZE(ps4_primary_formats),
++					      NULL, DRM_PLANE_TYPE_PRIMARY, NULL);
++	if (IS_ERR(primary))
++		return PTR_ERR(primary);
++	ret = drm_crtc_init_with_planes(dev, crtc, primary, NULL, funcs, NULL);
++	if (ret) {
++		drm_plane_cleanup(primary);
++		kfree(primary);
++	}
++	return ret;
++}
++
+ static int dce_v8_0_crtc_init(struct amdgpu_device *adev, int index)
+ {
+ 	struct amdgpu_crtc *amdgpu_crtc;
++	int ret;
+ 
+ 	amdgpu_crtc = kzalloc(sizeof(struct amdgpu_crtc) +
+ 			      (AMDGPUFB_CONN_LIMIT * sizeof(struct drm_connector *)), GFP_KERNEL);
+ 	if (amdgpu_crtc == NULL)
+ 		return -ENOMEM;
+ 
+-	drm_crtc_init(adev_to_drm(adev), &amdgpu_crtc->base, &dce_v8_0_crtc_funcs);
++	if (dce_v8_0_is_ps4_gpu(adev))
++		ret = ps4_crtc_init(adev_to_drm(adev), &amdgpu_crtc->base,
++					 &dce_v8_0_crtc_funcs);
++	else
++		ret = drm_crtc_init(adev_to_drm(adev), &amdgpu_crtc->base,
++				    &dce_v8_0_crtc_funcs);
++	if (ret) {
++		kfree(amdgpu_crtc);
++		return ret;
++	}
+ 
+ 	drm_mode_crtc_set_gamma_size(&amdgpu_crtc->base, 256);
+ 	amdgpu_crtc->crtc_id = index;
+diff --git a/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_init.c b/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_init.c
+index e8e4d98ac..a2a9f96a0 100755
+--- a/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_init.c
++++ b/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_init.c
+@@ -1580,6 +1580,8 @@ static void wlanCreateWirelessDevice(void)
+ #if (CFG_SUPPORT_TDLS == 1)
+ 	TDLSEX_WIPHY_FLAGS_INIT(prWiphy->flags);
+ #endif /* CFG_SUPPORT_TDLS */
++	/* Android runs in its own network namespace; the radio is moved there. */
++	prWiphy->flags |= WIPHY_FLAG_NETNS_OK;
+ 	prWiphy->max_remain_on_channel_duration = 5000;
+ 	prWiphy->mgmt_stypes = mtk_cfg80211_ais_default_mgmt_stypes;
+ 
+diff --git a/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_p2p.c b/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_p2p.c
+index ccfc25e78..2706ec48a 100755
+--- a/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_p2p.c
++++ b/drivers/net/wireless/mediatek/mt76x8/drv_wlan/MT6632/wlan/os/linux/gl_p2p.c
+@@ -1145,6 +1145,7 @@ BOOLEAN glP2pCreateWirelessDevice(P_GLUE_INFO_T prGlueInfo)
+ #endif
+ 	prWiphy->regulatory_flags = REGULATORY_CUSTOM_REG;
+ #endif
++	prWiphy->flags |= WIPHY_FLAG_NETNS_OK;
+ 	prWiphy->ap_sme_capa = 1;
+ 
+ 	prWiphy->max_scan_ssids = MAX_SCAN_LIST_NUM;
+diff --git a/mm/Kconfig b/mm/Kconfig
+index 9e0ca4824..231c98f15 100644
+--- a/mm/Kconfig
++++ b/mm/Kconfig
+@@ -1511,4 +1511,13 @@ config LAZY_MMU_MODE_KUNIT_TEST
+ 
+ source "mm/damon/Kconfig"
+ 
++config MEMFD_ASHMEM_SHIM
++	bool "Memfd ashmem ioctl compatibility support"
++	depends on MEMFD_CREATE
++	help
++	  This provides compatibility support for ashmem ioctl commands against
++	  memfd file descriptors. Android 14 and later only use memfd for shared
++	  memory when the kernel answers ashmem ioctls on memfds (from Android's
++	  common kernel, Isaac J. Manjarres, Google, 2025).
++
+ endmenu
+diff --git a/mm/Makefile b/mm/Makefile
+index eff9f9e7e..60b4f39e7 100644
+--- a/mm/Makefile
++++ b/mm/Makefile
+@@ -146,4 +146,5 @@ obj-$(CONFIG_GENERIC_IOREMAP) += ioremap.o
+ obj-$(CONFIG_SHRINKER_DEBUG) += shrinker_debug.o
+ obj-$(CONFIG_EXECMEM) += execmem.o
+ obj-$(CONFIG_TMPFS_QUOTA) += shmem_quota.o
++obj-$(CONFIG_MEMFD_ASHMEM_SHIM) += memfd-ashmem-shim.o
+ obj-$(CONFIG_LAZY_MMU_MODE_KUNIT_TEST) += tests/lazy_mmu_mode_kunit.o
+diff --git a/mm/memfd-ashmem-shim-internal.h b/mm/memfd-ashmem-shim-internal.h
+new file mode 100644
+index 000000000..b499434a9
+--- /dev/null
++++ b/mm/memfd-ashmem-shim-internal.h
+@@ -0,0 +1,52 @@
++// SPDX-License-Identifier: GPL-2.0
++
++/*
++ * Ashmem compatability for memfd
++ *
++ * Copyright (c) 2025, Google LLC.
++ * Author: Isaac J. Manjarres <isaacmanjarres@google.com>
++ */
++
++#ifndef _MM_MEMFD_ASHMEM_SHIM_INTERNAL_H
++#define _MM_MEMFD_ASHMEM_SHIM_INTERNAL_H
++
++#include <linux/compat.h>
++#include <linux/ioctl.h>
++#include <linux/types.h>
++
++#define ASHMEM_NAME_LEN		256
++
++/* Return values from ASHMEM_PIN: Was the mapping purged while unpinned? */
++#define ASHMEM_NOT_PURGED	0
++#define ASHMEM_WAS_PURGED	1
++
++/* Return values from ASHMEM_GET_PIN_STATUS: Is the mapping pinned? */
++#define ASHMEM_IS_UNPINNED	0
++#define ASHMEM_IS_PINNED	1
++
++struct ashmem_pin {
++	__u32 offset;	/* offset into region, in bytes, page-aligned */
++	__u32 len;	/* length forward from offset, in bytes, page-aligned */
++};
++
++#define __ASHMEMIOC		0x77
++
++#define ASHMEM_SET_NAME		_IOW(__ASHMEMIOC, 1, char[ASHMEM_NAME_LEN])
++#define ASHMEM_GET_NAME		_IOR(__ASHMEMIOC, 2, char[ASHMEM_NAME_LEN])
++#define ASHMEM_SET_SIZE		_IOW(__ASHMEMIOC, 3, size_t)
++#define ASHMEM_GET_SIZE		_IO(__ASHMEMIOC, 4)
++#define ASHMEM_SET_PROT_MASK	_IOW(__ASHMEMIOC, 5, unsigned long)
++#define ASHMEM_GET_PROT_MASK	_IO(__ASHMEMIOC, 6)
++#define ASHMEM_PIN		_IOW(__ASHMEMIOC, 7, struct ashmem_pin)
++#define ASHMEM_UNPIN		_IOW(__ASHMEMIOC, 8, struct ashmem_pin)
++#define ASHMEM_GET_PIN_STATUS	_IO(__ASHMEMIOC, 9)
++#define ASHMEM_PURGE_ALL_CACHES	_IO(__ASHMEMIOC, 10)
++#define ASHMEM_GET_FILE_ID		_IOR(__ASHMEMIOC, 11, unsigned long)
++
++/* support of 32bit userspace on 64bit platforms */
++#ifdef CONFIG_COMPAT
++#define COMPAT_ASHMEM_SET_SIZE		_IOW(__ASHMEMIOC, 3, compat_size_t)
++#define COMPAT_ASHMEM_SET_PROT_MASK	_IOW(__ASHMEMIOC, 5, unsigned int)
++#endif
++
++#endif /* _MM_MEMFD_ASHMEM_SHIM_INTERNAL_H */
+diff --git a/mm/memfd-ashmem-shim.c b/mm/memfd-ashmem-shim.c
+new file mode 100644
+index 000000000..258498cca
+--- /dev/null
++++ b/mm/memfd-ashmem-shim.c
+@@ -0,0 +1,213 @@
++// SPDX-License-Identifier: GPL-2.0
++
++/*
++ * Ashmem compatability for memfd
++ *
++ * Copyright (c) 2025, Google LLC.
++ * Author: Isaac J. Manjarres <isaacmanjarres@google.com>
++ */
++
++#include <asm-generic/mman-common.h>
++#include <linux/capability.h>
++#include <linux/fs.h>
++#include <linux/memfd.h>
++#include <linux/uaccess.h>
++
++#include "memfd-ashmem-shim.h"
++#include "memfd-ashmem-shim-internal.h"
++
++/* memfd file names all start with memfd: */
++#define MEMFD_PREFIX "memfd:"
++#define MEMFD_PREFIX_LEN (sizeof(MEMFD_PREFIX) - 1)
++
++static const char *get_memfd_name(struct file *file)
++{
++	/* This pointer is always valid, so no need to check if it's NULL. */
++	const char *file_name = file->f_path.dentry->d_name.name;
++
++	if (file_name != strstr(file_name, MEMFD_PREFIX))
++		return NULL;
++
++	return file_name;
++}
++
++static long get_name(struct file *file, void __user *name)
++{
++	const char *file_name = get_memfd_name(file);
++	size_t len;
++
++	if (!file_name)
++		return -EINVAL;
++
++	/* Strip MEMFD_PREFIX to retain compatibility with ashmem driver. */
++	file_name = &file_name[MEMFD_PREFIX_LEN];
++
++	/*
++	 * The expectation is that the user provided buffer is ASHMEM_NAME_LEN in size, which is
++	 * larger than the maximum size of a name for a memfd buffer, so the name should always fit
++	 * within the given buffer.
++	 *
++	 * However, we should ensure that the string will indeed fit in the user provided buffer.
++	 *
++	 * Add 1 to the copy size to account for the NUL terminator
++	 */
++	len = strlen(file_name) + 1;
++	if (len > ASHMEM_NAME_LEN)
++		return -EINVAL;
++
++	return copy_to_user(name, file_name, len) ? -EFAULT : 0;
++}
++
++static long get_prot_mask(struct file *file)
++{
++	long prot_mask = PROT_READ | PROT_EXEC;
++	long seals = memfd_fcntl(file, F_GET_SEALS, 0);
++
++	if (seals < 0)
++		return seals;
++
++	/* memfds are readable and executable by default. Only writability can be changed. */
++	if (!(seals & (F_SEAL_WRITE | F_SEAL_FUTURE_WRITE)))
++		prot_mask |= PROT_WRITE;
++
++	return prot_mask;
++}
++
++static long set_prot_mask(struct file *file, unsigned long prot)
++{
++	long curr_prot = get_prot_mask(file);
++	long ret = 0;
++
++	if (curr_prot < 0)
++		return curr_prot;
++
++	/*
++	 * memfds are always readable and executable; there is no way to remove either mapping
++	 * permission, nor is there a known usecase that requires it.
++	 *
++	 * Attempting to remove either of these mapping permissions will return successfully, but
++	 * will be a nop, as the buffer will still be mappable with these permissions.
++	 */
++	prot |= PROT_READ | PROT_EXEC;
++
++	/* Only allow permissions to be removed. */
++	if ((curr_prot & prot) != prot)
++		return -EINVAL;
++
++	/*
++	 * Removing PROT_WRITE:
++	 *
++	 * We could prevent any other mappings from having write permissions by adding the
++	 * F_SEAL_WRITE mapping. However, that would conflict with known usecases where it is
++	 * desirable to maintain an existing writable mapping, but forbid future writable mappings.
++	 *
++	 * To support those usecases, we use F_SEAL_FUTURE_WRITE.
++	 */
++	if (!(prot & PROT_WRITE))
++		ret = memfd_fcntl(file, F_ADD_SEALS, F_SEAL_FUTURE_WRITE);
++
++	return ret;
++}
++
++/*
++ * memfd_ashmem_shim_ioctl - ioctl handler for ashmem commands
++ * @file: The shmem file.
++ * @cmd: The ioctl command.
++ * @arg: The argument for the ioctl command.
++ *
++ * The purpose of this handler is to allow old applications to continue working
++ * on newer kernels by allowing them to invoke ashmem ioctl commands on memfds.
++ *
++ * The ioctl handler attempts to retain as much compatibility with the ashmem
++ * driver as possible.
++ */
++long memfd_ashmem_shim_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
++{
++	long ret = -ENOTTY;
++	unsigned long inode_nr;
++
++	switch (cmd) {
++	/*
++	 * Older applications won't create memfds and try to use ASHMEM_SET_NAME/ASHMEM_SET_SIZE on
++	 * them intentionally.
++	 *
++	 * Instead, we can end up in this scenario if an old application receives a memfd that was
++	 * created by another process.
++	 *
++	 * However, the current process shouldn't expect to be able to reliably [re]name/size a
++	 * buffer that was shared with it, since the process that shared that buffer with it, or
++	 * any other process that references the buffer could have already mapped it.
++	 *
++	 * Additionally in the case of ASHMEM_SET_SIZE, when processes create memfds that are going
++	 * to be shared with other processes in Android, they also specify the size of the memory
++	 * region and seal the file against any size changes. Therefore, ASHMEM_SET_SIZE should not
++	 * be supported anyway.
++	 *
++	 * Therefore, it is reasonable to return -EINVAL here, as if the buffer was already mapped.
++	 */
++	case ASHMEM_SET_NAME:
++	case ASHMEM_SET_SIZE:
++		ret = -EINVAL;
++		break;
++	case ASHMEM_GET_NAME:
++		ret = get_name(file, (void __user *)arg);
++		break;
++	case ASHMEM_GET_SIZE:
++		ret = i_size_read(file_inode(file));
++		break;
++	case ASHMEM_SET_PROT_MASK:
++		ret = set_prot_mask(file, arg);
++		break;
++	case ASHMEM_GET_PROT_MASK:
++		ret = get_prot_mask(file);
++		break;
++	/*
++	 * Unpinning ashmem buffers was deprecated with the release of Android 10,
++	 * as it did not yield any remarkable benefits. Therefore, ignore pinning
++	 * related requests.
++	 *
++	 * This makes it so that memory is always "pinned" or never entirely freed
++	 * until all references to the ashmem buffer are dropped. The memory occupied
++	 * by the buffer is still subject to being reclaimed (swapped out) under memory
++	 * pressure, but that is not the same as being freed.
++	 *
++	 * This makes it so that:
++	 *
++	 * 1. Memory is always pinned and therefore never purged.
++	 * 2. Requests to unpin memory (make it a candidate for being freed) are ignored.
++	 */
++	case ASHMEM_PIN:
++		ret = ASHMEM_NOT_PURGED;
++		break;
++	case ASHMEM_UNPIN:
++		ret = 0;
++		break;
++	case ASHMEM_GET_PIN_STATUS:
++		ret = ASHMEM_IS_PINNED;
++		break;
++	case ASHMEM_PURGE_ALL_CACHES:
++		ret = capable(CAP_SYS_ADMIN) ? 0 : -EPERM;
++		break;
++	case ASHMEM_GET_FILE_ID:
++		inode_nr = file_inode(file)->i_ino;
++		if (copy_to_user((void __user *)arg, &inode_nr, sizeof(inode_nr)))
++			ret = -EFAULT;
++		else
++			ret = 0;
++		break;
++	}
++
++	return ret;
++}
++
++#ifdef CONFIG_COMPAT
++long memfd_ashmem_shim_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
++{
++	if (cmd == COMPAT_ASHMEM_SET_SIZE)
++		cmd = ASHMEM_SET_SIZE;
++	else if (cmd == COMPAT_ASHMEM_SET_PROT_MASK)
++		cmd = ASHMEM_SET_PROT_MASK;
++
++	return memfd_ashmem_shim_ioctl(file, cmd, arg);
++}
++#endif
+diff --git a/mm/memfd-ashmem-shim.h b/mm/memfd-ashmem-shim.h
+new file mode 100644
+index 000000000..026789b03
+--- /dev/null
++++ b/mm/memfd-ashmem-shim.h
+@@ -0,0 +1,21 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __MM_MEMFD_ASHMEM_SHIM_H
++#define __MM_MEMFD_ASHMEM_SHIM_H
++
++/*
++ * mm/memfd-ashmem-shim.h
++ *
++ * Ashmem compatability for memfd
++ *
++ * Copyright (c) 2025, Google LLC.
++ * Author: Isaac J. Manjarres <isaacmanjarres@google.com>
++ *
++ */
++
++#include <linux/fs.h>
++
++long memfd_ashmem_shim_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
++#ifdef CONFIG_COMPAT
++long memfd_ashmem_shim_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
++#endif
++#endif /* __MM_MEMFD_ASHMEM_SHIM_H */
+diff --git a/mm/shmem.c b/mm/shmem.c
+index cfb546785..10362d0b1 100644
+--- a/mm/shmem.c
++++ b/mm/shmem.c
+@@ -86,6 +86,10 @@ static struct vfsmount *shm_mnt __ro_after_init;
+ 
+ #include "internal.h"
+ 
++#ifdef CONFIG_MEMFD_ASHMEM_SHIM
++#include "memfd-ashmem-shim.h"
++#endif
++
+ #define VM_ACCT(size)    (PAGE_ALIGN(size) >> PAGE_SHIFT)
+ 
+ /* Pretend that each entry is of this size in directory's i_size */
+@@ -5162,6 +5166,12 @@ static const struct file_operations shmem_file_operations = {
+ 	.fallocate	= shmem_fallocate,
+ 	.setlease	= generic_setlease,
+ #endif
++#ifdef CONFIG_MEMFD_ASHMEM_SHIM
++	.unlocked_ioctl	= memfd_ashmem_shim_ioctl,
++#ifdef CONFIG_COMPAT
++	.compat_ioctl	= memfd_ashmem_shim_compat_ioctl,
++#endif
++#endif
+ };
+ 
+ static const struct inode_operations shmem_inode_operations = {
+diff --git a/net/core/sysctl_net_core.c b/net/core/sysctl_net_core.c
+index b508618bf..597dfc3b9 100644
+--- a/net/core/sysctl_net_core.c
++++ b/net/core/sysctl_net_core.c
+@@ -21,6 +21,7 @@
+ 
+ #include <net/ip.h>
+ #include <net/sock.h>
++#include <net/netns/generic.h>
+ #include <net/net_ratelimit.h>
+ #include <net/busy_poll.h>
+ #include <net/pkt_sched.h>
+@@ -840,9 +841,102 @@ static __net_initdata struct pernet_operations sysctl_core_ops = {
+ 	.exit = sysctl_core_net_exit,
+ };
+ 
++#ifdef CONFIG_BPF_JIT
++/*
++ * PS4 (Android TV for PS4): Android runs in its own network namespace, and
++ * Android 16's netbpfload writes net.core.bpf_jit_enable and fails the boot
++ * when the file is missing. Show the BPF JIT knobs in every namespace. They
++ * stay global, with the same handlers: writes still need CAP_SYS_ADMIN in the
++ * initial user namespace. Registered into the namespace's own set directly,
++ * because register_net_sysctl_sz() makes global data read-only there.
++ */
++static unsigned int bpf_jit_netns_id __read_mostly;
++
++struct bpf_jit_netns {
++	struct ctl_table_header *hdr;
++};
++
++static struct ctl_table bpf_jit_netns_table[] = {
++	{
++		.procname	= "bpf_jit_enable",
++		.data		= &bpf_jit_enable,
++		.maxlen		= sizeof(int),
++		.mode		= 0644,
++		.proc_handler	= proc_dointvec_minmax_bpf_enable,
++# ifdef CONFIG_BPF_JIT_ALWAYS_ON
++		.extra1		= SYSCTL_ONE,
++		.extra2		= SYSCTL_ONE,
++# else
++		.extra1		= SYSCTL_ZERO,
++		.extra2		= SYSCTL_TWO,
++# endif
++	},
++# ifdef CONFIG_HAVE_EBPF_JIT
++	{
++		.procname	= "bpf_jit_harden",
++		.data		= &bpf_jit_harden,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax_bpf_restricted,
++		.extra1		= SYSCTL_ZERO,
++		.extra2		= SYSCTL_TWO,
++	},
++	{
++		.procname	= "bpf_jit_kallsyms",
++		.data		= &bpf_jit_kallsyms,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax_bpf_restricted,
++		.extra1		= SYSCTL_ZERO,
++		.extra2		= SYSCTL_ONE,
++	},
++# endif
++	{
++		.procname	= "bpf_jit_limit",
++		.data		= &bpf_jit_limit,
++		.maxlen		= sizeof(long),
++		.mode		= 0600,
++		.proc_handler	= proc_dolongvec_minmax_bpf_restricted,
++		.extra1		= SYSCTL_LONG_ONE,
++		.extra2		= &bpf_jit_limit_max,
++	},
++};
++
++static __net_init int bpf_jit_netns_init(struct net *net)
++{
++	struct bpf_jit_netns *bn = net_generic(net, bpf_jit_netns_id);
++
++	if (net_eq(net, &init_net))
++		return 0;
++	bn->hdr = __register_sysctl_table(&net->sysctls, "net/core",
++					  bpf_jit_netns_table,
++					  ARRAY_SIZE(bpf_jit_netns_table));
++	return bn->hdr ? 0 : -ENOMEM;
++}
++
++static __net_exit void bpf_jit_netns_exit(struct net *net)
++{
++	struct bpf_jit_netns *bn = net_generic(net, bpf_jit_netns_id);
++
++	if (bn->hdr)
++		unregister_sysctl_table(bn->hdr);
++}
++
++static struct pernet_operations bpf_jit_netns_ops = {
++	.init = bpf_jit_netns_init,
++	.exit = bpf_jit_netns_exit,
++	.id   = &bpf_jit_netns_id,
++	.size = sizeof(struct bpf_jit_netns),
++};
++#endif
++
+ static __init int sysctl_core_init(void)
+ {
+ 	register_net_sysctl(&init_net, "net/core", net_core_table);
++#ifdef CONFIG_BPF_JIT
++	if (register_pernet_subsys(&bpf_jit_netns_ops))
++		pr_warn("PS4: BPF JIT sysctls unavailable in network namespaces\n");
++#endif
+ 	return register_pernet_subsys(&sysctl_core_ops);
+ }
+ 

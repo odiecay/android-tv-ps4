@@ -108,10 +108,23 @@ int _main(void){
  if(got<=0){out.rc=-105;goto done;}
  for(ssize_t i=0;i<got;i++)if(args[i]=='\n'||args[i]=='\r')args[i]=0;
  size_t used=0;while(args[used])used++;
- /* Baikal needs these; the old Baikal-only kernel had them built in. One
-  * kernel now, so they're added here, only when the southbridge is Baikal. */
- if((sb>>16)==ATV_SB_FAMILY_BAIKAL){const char baikal[]=" pci=nocrs intremap=off";
-  if(used+sizeof(baikal)>sizeof(args)){out.rc=-108;goto done;}copybytes(args+used,baikal,sizeof(baikal));used+=sizeof(baikal)-1;}
+ /* Baikal: the settings psX booted a Baikal with (docs/PS4-BOOTARGS.md):
+  * Orbis SATA PHY profile, 5 ms AHCI completion poll, first link at 1.5 Gbps,
+  * HDMI forced on at 1080p60 and a generic 1080p EDID if the TV's can't be
+  * read. Added only when the southbridge is Baikal. */
+ if((sb>>16)==ATV_SB_FAMILY_BAIKAL){
+  const char baikal[]=" pci=nocrs intremap=off ps4_bpcie.ps4_sata_phy_orbit=1"
+   " libahci.ps4_ahci_poll_ms=5 libata.force=1:1.5Gbps drm.edid_firmware=edid/1920x1080.bin";
+  const char mode[]="video=HDMI-A-1:1920x1080@60";
+  if(used+sizeof(baikal)+1>sizeof(args)){out.rc=-108;goto done;}
+  /* The first video= for a connector wins, so mark the existing one forced
+   * (D) rather than appending a second. */
+  for(size_t i=0;i+sizeof(mode)-1<=used;i++){size_t k=0;
+   while(k<sizeof(mode)-1&&args[i+k]==mode[k])k++;
+   if(k==sizeof(mode)-1&&args[i+k]!='D'){size_t e=i+k;
+    for(size_t j=used;j>e;j--)args[j]=args[j-1];
+    args[e]='D';used++;break;}}
+  copybytes(args+used,baikal,sizeof(baikal));used+=sizeof(baikal)-1;}
  const char tag[]=" androidtv.boot_id=" ATV_BUILD_ID;
  if(used+sizeof(tag)>sizeof(args)){out.rc=-108;goto done;}copybytes(args+used,tag,sizeof(tag));
  out.stage=3;save();VAR(errno,int)=0;

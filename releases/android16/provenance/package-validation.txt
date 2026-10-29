@@ -1,0 +1,29 @@
+[OK]    (Limit) PKG Size @ 0x418
+[OK]    (Hash) Content Digest @ 0x2920
+[OK]    (Hash) Game Digest @ 0x2940
+[OK]    (Hash) Header Digest @ 0x2960
+[OK]    (Hash) Major Param Digest @ 0x29A0
+[OK]    (Hash) Param Digest @ 0x29C0
+[OK]    (Hash) ENTRY_KEYS digest @ 0x2C80
+[OK]    (Hash) IMAGE_KEY digest @ 0x2CA0
+[OK]    (Hash) GENERAL_DIGESTS digest @ 0x2CC0
+[OK]    (Hash) METAS digest @ 0x2CE0
+[OK]    (Hash) ENTRY_NAMES digest @ 0x2D00
+[OK]    (Hash) LICENSE_DAT digest @ 0x2D20
+[OK]    (Hash) LICENSE_INFO digest @ 0x2D40
+[OK]    (Hash) PSRESERVED_DAT digest @ 0x2D60
+[OK]    (Hash) PARAM_SFO digest @ 0x2D80
+[OK]    (Hash) PLAYGO_CHUNK_DAT digest @ 0x2DA0
+[OK]    (Hash) PLAYGO_CHUNK_SHA digest @ 0x2DC0
+[OK]    (Hash) PLAYGO_MANIFEST_XML digest @ 0x2DE0
+[OK]    (Hash) PIC1_PNG digest @ 0x2E00
+[OK]    (Hash) ICON0_PNG digest @ 0x2E20
+[OK]    (Hash) PFS Signed Digest @ 0x460
+[OK]    (Hash) PFS Image Digest @ 0x440
+[OK]    (Hash) Body Digest @ 0x160
+[OK]    (Hash) Digest Table Hash @ 0x140
+[OK]    (Hash) SC Entries Hash 1 @ 0x100
+[OK]    (Hash) SC Entries Hash 2 @ 0x120
+[OK]    (Hash) PKG Header Digest @ 0xFE0
+[OK]    (Signature) PKG Header Signature @ 0x1000
+[OK]    (Signature) Debug RIF Signature @ 0x327B0

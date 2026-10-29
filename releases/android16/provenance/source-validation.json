@@ -1,0 +1,94 @@
+{
+  "checked_at": "2026-10-29",
+  "original_pkg_sha256": "7a930b70d4eef5c9c3e48db7e18db5e803a43d190b4176bb41120da7d7a1ad2f",
+  "rebuilt_pkg_sha256": "10cebd9134ac87846aef26cdd4b0b55144308aa5efa33bbddc13ee0cb984ada0",
+  "byte_identical_package": false,
+  "package_validation": "passed",
+  "source_and_input_hashes_checked": 94,
+  "matching_build_fields": {
+    "source_sha256": true,
+    "assets": true,
+    "artwork_sha256": true,
+    "metadata_sha256": true,
+    "helper_object_hashes": true,
+    "payload": true,
+    "loader_build": true
+  },
+  "binary_comparison": {
+    "launcher.elf": {
+      "original_sha256": "8355fe591f38967b17e1dd0c5ac21d8aa81040e4aa1120f11e71086b5f0abe8d",
+      "rebuilt_sha256": "8355fe591f38967b17e1dd0c5ac21d8aa81040e4aa1120f11e71086b5f0abe8d",
+      "matches": true
+    },
+    "eboot.bin": {
+      "original_sha256": "c641e422972c603dd4ccde50c045da4898d3136307d9c6655915d05e93f051da",
+      "rebuilt_sha256": "c641e422972c603dd4ccde50c045da4898d3136307d9c6655915d05e93f051da",
+      "matches": true
+    },
+    "boot-payload.elf": {
+      "original_sha256": "508e6e4b91f359b92e29b425b2df5ac2d38ce632a28c01faa49688b876afd3b1",
+      "rebuilt_sha256": "508e6e4b91f359b92e29b425b2df5ac2d38ce632a28c01faa49688b876afd3b1",
+      "matches": true
+    }
+  },
+  "kernel_patch_series_reconstructs_release_tree": true,
+  "kernel_source_files": 95125,
+  "kernel_config_matches_embedded_release_config": true,
+  "recovered_runtime_additions": 25,
+  "kernel_recompiled_during_this_check": false,
+  "full_android_platform_built_from_source": false,
+  "console_tested_during_this_check": false,
+  "host_tests": [
+    {
+      "test": "test_bluetooth_adapter.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_boot_process.py",
+      "exit_code": 1
+    },
+    {
+      "test": "test_copy.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_display_modes.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_display_release.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_installer.py",
+      "exit_code": 1
+    },
+    {
+      "test": "test_installer_ui.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_payload_send.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_power_cleanup.py",
+      "exit_code": 0
+    },
+    {
+      "test": "test_sender_stage.py",
+      "exit_code": 1
+    }
+  ],
+  "host_test_failures": {
+    "test_boot_process.py": "Inherited fixture lacks generated boot-inputs.h; compilation stopped.",
+    "test_installer.py": "Inherited fixture lacks generated boot-inputs.h; compilation stopped.",
+    "test_sender_stage.py": "Inherited fixture lacks installer_ui_boot_error stub; linking stopped."
+  },
+  "notes": [
+    "The new PKG was built for source verification only; it is not replacing the original download.",
+    "The rebuilt launcher.elf, eboot.bin and boot-payload.elf match the original build byte for byte. The complete PKG hash differs.",
+    "No power-off/restart/HDMI fix is added by this source publication.",
+    "Unreleased USB filesystem-filter edits remain outside this snapshot."
+  ]
+}

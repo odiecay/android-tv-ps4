@@ -1,0 +1,34 @@
+From 1675dfabba2745d046798e115e0b4f04f283f80a Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Wed, 28 Oct 2026 10:47:59 +1000
+Subject: [PATCH 12/31] Revert "DEBUG (dev, revert later): sky2 interrupt
+ status statistics"
+
+This reverts commit 53b65dced3ca40923651f3b6c413e818eb81b97f.
+---
+ drivers/net/ethernet/marvell/sky2.c | 12 ------------
+ 1 file changed, 12 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/sky2.c b/drivers/net/ethernet/marvell/sky2.c
+index c2a2034d1..5a3758f72 100644
+--- a/drivers/net/ethernet/marvell/sky2.c
++++ b/drivers/net/ethernet/marvell/sky2.c
+@@ -3139,18 +3139,6 @@ static irqreturn_t sky2_intr(int irq, void *dev_id)
+ 	sky2_write32(hw, AEOLIA_SP_ICR, 2);
+ #endif
+ 	status = sky2_read32(hw, B0_Y2_SP_ISRC2);
+-#ifdef CONFIG_X86_PS4
+-	{	/* DEBUG (dev, revert later): which status bits drive the IRQ rate */
+-		static unsigned long n, none;
+-		static u32 seen;
+-		n++; seen |= status;
+-		if (status == 0 || status == ~0)
+-			none++;
+-		if (!(n % 20000))
+-			pr_info("atvdbg: sky2 irq %lu, empty %lu, status now %08x, bits seen %08x, lisr %08x\n",
+-				n, none, status, seen, sky2_read32(hw, B0_Y2_SP_LISR));
+-	}
+-#endif
+ 	if (status == 0 || status == ~0) {
+ 		sky2_write32(hw, B0_Y2_SP_ICR, 2);
+ 		return IRQ_NONE;

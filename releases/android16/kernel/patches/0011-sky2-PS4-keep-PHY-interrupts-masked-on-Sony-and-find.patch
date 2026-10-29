@@ -1,0 +1,40 @@
+From a3c3c146ba0e546aa34eaeb59b24feb5b8d55e21 Mon Sep 17 00:00:00 2001
+From: Codey <codey@eliterepairs.com.au>
+Date: Tue, 27 Oct 2026 20:02:31 +1000
+Subject: [PATCH 11/31] sky2/PS4: keep PHY interrupts masked on Sony and
+ find/track the link from the 1 s watchdog (started at open)
+
+---
+ drivers/net/ethernet/marvell/sky2.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/drivers/net/ethernet/marvell/sky2.c b/drivers/net/ethernet/marvell/sky2.c
+index cd2ac8ecf..c2a2034d1 100644
+--- a/drivers/net/ethernet/marvell/sky2.c
++++ b/drivers/net/ethernet/marvell/sky2.c
+@@ -1767,8 +1767,25 @@ static int sky2_open(struct net_device *dev)
+ 		imask |= Y2_IS_PHY_QLNK;	/* enable PHY Quick Link */
+ 
+ 	imask |= portirq_msk[port];
++#ifdef CONFIG_X86_PS4
++	/* Aeolia raises the PHY interrupt thousands of times a second without
++	 * the poll path ever seeing it (a whole CPU core in NET_RX softirq).
++	 * Leave it masked; sky2_ps4_phy_guard() checks the link once a second. */
++	if (hw->pdev->vendor == PCI_VENDOR_ID_SONY) {
++		struct sky2_port *ps4_port = netdev_priv(hw->dev[port]);
++
++		imask &= ~((port == 0 ? Y2_IS_IRQ_PHY1 : Y2_IS_IRQ_PHY2) | Y2_IS_PHY_QLNK);
++		ps4_port->ps4_phy_polled = true;
++	}
++#endif
+ 	sky2_write32(hw, B0_IMSK, imask);
+ 	sky2_read32(hw, B0_IMSK);
++#ifdef CONFIG_X86_PS4
++	/* Link-up normally arrives through the PHY interrupt masked above, and the
++	 * watchdog is only started at link-up, so start it now to find the link. */
++	if (hw->pdev->vendor == PCI_VENDOR_ID_SONY)
++		mod_timer(&hw->watchdog_timer, jiffies + HZ);
++#endif
+ 
+ 	netif_info(sky2, ifup, dev, "enabling interface\n");
+ 
