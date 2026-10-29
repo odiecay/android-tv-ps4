@@ -2,6 +2,8 @@
 
 ![Android TV for PS4](branding/repository-banner.svg)
 
+> **Android 16 v0.1 source is available:** [browse and build it](https://github.com/odiecay/android-tv-ps4/tree/v0.1) · [download project and full kernel source](https://github.com/odiecay/android-tv-ps4/releases/tag/v0.1). The v0.1 source includes the power/restart cleanup update in its normal build; see its [hardware status](https://github.com/odiecay/android-tv-ps4/blob/v0.1/releases/android16/STATUS.md). The guide below covers Android 13 / 1.1.
+
 Android TV 13 on a PlayStation 4, based on **BRTDTV's Android TV x86** build. Install one PKG, open it from the home screen, and the console boots straight into Android TV from its internal drive. Your apps, accounts and settings are kept between launches.
 
 Questions, testing, or just want to follow along? Join the **[Discord server](https://discord.gg/UxC8kx6Eh5)**.
