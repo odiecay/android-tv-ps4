@@ -53,6 +53,14 @@
       "source": "MT7668 Wi-Fi driver from the ps4-linux tree (drivers/net/wireless/mediatek/mt76x8), built as a module for 6.15.4-androidtv-ps4-aeolia with kernel/mt7668-proc-copy-bound.patch and kernel/mt7668-netns-ok.patch, debug symbols stripped",
       "location": "drive"
     },
+    "lib/modules/7.0.8-androidtv-ps4-baikal/extra/psx_mts_net.ko": {
+      "sha256": "36e6af4904b6deed76f308b59c8fa3df7de0e95a68c0e383df77d8bdaf07f0fb",
+      "source": "kernel/baikal/psx_mts_net.c built against github.com/Bobjes/linux-rmux androidtv/baikal-7.0.8 e3c8e8c1c (androidtv/build.sh), stripped"
+    },
+    "lib/modules/7.0.8-androidtv-ps4-baikal/extra/xt_quota2.ko": {
+      "sha256": "6683d6eea9426fbddcdb18a189848fbf7bc479c30070413841d1400504da6602",
+      "source": "AOSP kernel/common android13-5.15 net/netfilter/xt_quota2.c with patches/quota2-namespace-port.patch, built against github.com/Bobjes/linux-rmux androidtv/baikal-7.0.8 e3c8e8c1c (androidtv/build.sh), stripped"
+    },
     "opt/androidtv-ps4/AtvDeviceNameOverlay.apk": {
       "sha256": "d002f8428d91cda7e0fd27e11b63d93ee7971bacdb6b651d17ae25457e59f6b7",
       "source": "name-overlay/ built by name-overlay/build.py, signed with the AOSP platform test key"

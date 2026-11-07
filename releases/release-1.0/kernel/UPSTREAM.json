@@ -7,6 +7,10 @@
   "source_diff_audit": "All tracked upstream files compared; only dce_v8_0.c differs",
   "source_patch_sha256": "76391b942fdd1c53b2d49c824bcfa7e623ff57a7c40b78b9546bb2f4f17d40c8",
   "config_changes_1_1": "CONFIG_QUOTA=y, CONFIG_QUOTACTL=y and CONFIG_QFMT_V2=y (ext4 quota and project quota support for Android app storage folders); the Baikal kernel has the same changes",
-  "baikal_kernel_sha256": "9198ea8069df32760f85a2e7b7f6acc2ccc2674c0768c26996436064a87ace45",
-  "baikal_patches": "baikal/0001-baikal-southbridge-support.patch, baikal/0002-linux-ps4-v60-baikal-display.patch; CONFIG_CMDLINE=\"pci=nocrs intremap=off video=HDMI-A-1:1920x1080@60D\""
+  "baikal_repository": "https://github.com/Bobjes/linux-rmux.git",
+  "baikal_branch": "androidtv/baikal-7.0.8",
+  "baikal_commit": "e3c8e8c1cc0d4a20f2025e169bf2480d13c7f171",
+  "baikal_base": "rmux baikal/7.0.8-Stable d8cbb8e912f59c352479f1158103e8ce7b6ca8c4",
+  "baikal_config_sha256": "ab89ed4c6234f12a599a7a1b2d12d3709ed9a0b6a86ba58c7155cab982d22ea3",
+  "baikal_localversion": "-androidtv-ps4-baikal"
 }

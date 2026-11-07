@@ -149,6 +149,14 @@ requirements, and testing boot. Compiler version, build timestamp and identity
 can affect the resulting kernel hash; the recorded hash identifies the tested
 input, not a promise of byte-identical output from arbitrary toolchains.
 
+### Baikal kernel
+
+`bzImage-baikal` comes from [Bobjes/linux-rmux `androidtv/baikal-7.0.8`](https://github.com/Bobjes/linux-rmux/tree/androidtv/baikal-7.0.8)
+(`androidtv/build.sh`, release `7.0.8-androidtv-ps4-baikal`). Its out-of-tree
+modules and changes are listed in
+[`kernel/baikal`](../releases/release-1.0/kernel/baikal/README.md); the module
+files go in the `--additions` directory for `repack-runtime.py`.
+
 ## Editing the packaged runtime
 
 For changes to the published boot scripts or power supervisor, use the current

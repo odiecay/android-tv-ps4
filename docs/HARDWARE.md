@@ -30,13 +30,13 @@ The model number alone can't tell Belize 2 from Baikal. The launcher writes the 
 
 | | Fat, Aeolia | Fat CUH-12xx, Belize | Slim, Belize or Belize 2 | Slim, Baikal | Pro, Belize or Belize 2 | Pro, Baikal |
 | --- | --- | --- | --- | --- | --- | --- |
-| Starting Linux | ✅ on 13.52, 🧪 other firmware | ✅ | ✅ | ⚠️ no picture after the switch | ✅ | ⚠️ no picture after the switch |
-| GPU and graphics fixes | ✅ Liverpool | ✅ Liverpool | ✅ Liverpool | 🧪 Liverpool | ✅ Gladius starts | 🧪 Gladius |
-| HDMI picture and sound | ✅ | ✅ | ✅ picture | ⚠️ no signal | ✅ picture | ⚠️ no signal |
-| Internal drive | ✅ | ✅ since the 26 Oct update | ✅ since the 26 Oct update | ⚠️ Baikal port | 🧪 fixed in the 26 Oct update | ⚠️ Baikal port |
-| USB | ✅ | ✅ | ✅ | ⚠️ Baikal port | ✅ | ⚠️ Baikal port |
-| Wi-Fi and Bluetooth | ✅ Marvell 88W8797 | ✅ Marvell 88W8897 | ⚠️ MT7668: Bluetooth works, Wi-Fi doesn't turn on yet (fix in the next build); 🧪 88W8897 (firmware loads) | ⚠️ Baikal port | 🧪 88W8897 or MT7668 | ⚠️ Baikal port |
-| Ethernet | ✅ | ✅ | 🧪 | ⚠️ Baikal port | 🧪 | ⚠️ Baikal port |
+| Starting Linux | ✅ on 13.52, 🧪 other firmware | ✅ | ✅ | ⚠️ no picture after the switch | ✅ | ✅ 7.0.8 kernel, build 133 |
+| GPU and graphics fixes | ✅ Liverpool | ✅ Liverpool | ✅ Liverpool | 🧪 Liverpool | ✅ Gladius starts | ✅ Gladius |
+| HDMI picture and sound | ✅ | ✅ | ✅ picture | ⚠️ no signal | ✅ picture | ✅ picture |
+| Internal drive | ✅ | ✅ since the 26 Oct update | ✅ since the 26 Oct update | ⚠️ Baikal port | 🧪 fixed in the 26 Oct update | ✅ |
+| USB | ✅ | ✅ | ✅ | ⚠️ Baikal port | ✅ | ✅ |
+| Wi-Fi and Bluetooth | ✅ Marvell 88W8797 | ✅ Marvell 88W8897 | ⚠️ MT7668: Bluetooth works, Wi-Fi doesn't turn on yet (fix in the next build); 🧪 88W8897 (firmware loads) | ⚠️ Baikal port | 🧪 88W8897 or MT7668 | ✅ MT7668 |
+| Ethernet | ✅ | ✅ | 🧪 | ⚠️ Baikal port | 🧪 | ✅ |
 | Video playback fix (720p/4K freeze) | ✅ | 🧪 | 🧪 | 🧪 | 🧪 | 🧪 |
 | Controller as remote, screensaver | ✅ | 🧪 | 🧪 | 🧪 | 🧪 | 🧪 |
 
@@ -99,6 +99,7 @@ Every ✅ on this page comes from a console in this list. Failed attempts are li
 | CUH-2116A | 13.52 | Belize 2 | Linux starts; stopped at the internal drive before the 26 Oct update | [#12](https://github.com/odiecay/android-tv-ps4/issues/12) |
 | CUH-2215B | 12.50 | Belize | Linux starts; stopped at the internal drive before the 26 Oct update | [#21](https://github.com/odiecay/android-tv-ps4/issues/21) |
 | CUH-2216A | 12.52 | Belize 2 | Linux starts; stopped at the internal drive before the 26 Oct update | [#8](https://github.com/odiecay/android-tv-ps4/issues/8) |
+| CUH-7208B (Pro) | 11.50 | Baikal | Works with the 7.0.8 kernel (build 133, started from USB): Android, picture, internal drive, MT7668 Wi-Fi and Bluetooth, Ethernet. Build 132: black screen, no logs | Pull request |
 | CUH-7216B (Pro) | — | Baikal | Black screen after the switch to Linux | [#2](https://github.com/odiecay/android-tv-ps4/issues/2) |
 | CUH-7216B (Pro) | 9.00 | Baikal | Freezes with the light white straight after opening the app; nothing on screen or on a USB stick | Discord report |
 | Slim | 13.52 | Baikal | Black screen after the switch to Linux | [#16](https://github.com/odiecay/android-tv-ps4/issues/16) |

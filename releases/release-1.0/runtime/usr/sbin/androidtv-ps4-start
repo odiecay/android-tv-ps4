@@ -191,7 +191,7 @@ stage "Hardware: storage=$userpart sdio=[${sdio% }] net=[$(ls /sys/class/net 2>/
 for device in /sys/bus/pci/devices/*; do
  [ "$(cat "$device/vendor" 2>/dev/null)" = 0x104d ] && [ "$(cat "$device/device" 2>/dev/null)" = 0x90d8 ] || continue
  stage 'Baikal Ethernet found; loading its driver'
- insmod /lib/modules/6.15.4-androidtv-ps4-aeolia/extra/psx_mts_net.ko autoarm=1 || stage 'Baikal Ethernet driver failed to load; continuing without Ethernet'
+ insmod "/lib/modules/$(uname -r)/extra/psx_mts_net.ko" autoarm=1 || stage 'Baikal Ethernet driver failed to load; continuing without Ethernet'
 done
 mkdir -p /mnt/ps4-user /mnt/android-share /mnt/android-sfs /mnt/android-lower /mnt/android-persistent /android
 # The user partition is AES-XTS with the EAP key. From the CUH-1200 on
@@ -235,7 +235,9 @@ mt7668=
 case " $sdio " in
  *' 0x037a:0x7608 '*)
   stage 'MediaTek MT7668 Wi-Fi found; loading its driver'
-  if tar -xzf "$installation/mt7668-wifi.tar.gz" -C / && insmod /lib/modules/6.15.4-androidtv-ps4-aeolia/extra/wlan_mt76x8_sdio.ko; then mt7668=1
+  # Built in on the Baikal kernel
+  if ls /sys/bus/sdio/drivers 2>/dev/null | grep -q mt6632; then mt7668=1
+  elif tar -xzf "$installation/mt7668-wifi.tar.gz" -C / && insmod /lib/modules/6.15.4-androidtv-ps4-aeolia/extra/wlan_mt76x8_sdio.ko; then mt7668=1
   else stage 'MT7668 Wi-Fi driver failed to load; continuing without Wi-Fi'; fi
   ;;
 esac
@@ -448,7 +450,7 @@ done < /android/fstab.mustang
 stage "USB storage for Android: $(grep -c voldmanaged /android/fstab.mustang) USB hubs; PS4 drive port ${internal_port:-not on USB} left out"
 cp "$assets/android-child.sh" /run/androidtv-ps4/android-child.sh
 cp "$assets/binder-devices" /run/androidtv-ps4/binder-devices
-cp "$assets/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
+cp "/lib/modules/$(uname -r)/extra/xt_quota2.ko" /run/androidtv-ps4/xt_quota2.ko
 cp /mnt/android-share/libgallium-baseline.so /android/system/vendor/lib64/dri/libgallium_dri.so
 echo 'ca0b4228ede6a6763568e6cafd4efc472f7d31eaae7622b03ad8d3dd3c7e545f  /android/system/vendor/lib64/dri/libgallium_dri.so' | sha256sum -c -
 # The native x86 YouTube/Kodi processes load the 32-bit Mesa driver.
@@ -550,7 +552,9 @@ fi
 # Move the console's Wi-Fi radio into Android: the one that owns the Wi-Fi
 # interface, which isn't always phy0 (the MediaTek MT7668 driver registers a
 # second radio for Wi-Fi Direct). A failure is logged and Android still starts.
-radio=$(/usr/sbin/iw dev 2>/dev/null | awk '$1 == "Interface" && $2 !~ /^p2p/ {print $2; exit}')
+# Station interface, not the MT7668 ap0/ap1
+radio=$(/usr/sbin/iw dev 2>/dev/null | awk '$1 == "Interface" && $2 ~ /^wlan/ {print $2; exit}')
+[ -n "$radio" ] || radio=$(/usr/sbin/iw dev 2>/dev/null | awk '$1 == "Interface" && $2 !~ /^(p2p|ap)/ {print $2; exit}')
 if [ -n "$radio" ]; then
     wiphy=$(/usr/sbin/iw dev "$radio" info 2>/dev/null | awk '$1 == "wiphy" {print $2}')
     /usr/sbin/ip link set "$radio" down || true
