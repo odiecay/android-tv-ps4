@@ -10,9 +10,8 @@ source=root/'loader-source/linux/ps4-kexec-common'
 # The 13.52 blob is pinned so loader changes are deliberate. 86ab8e60 was the
 # console-confirmed 1.1 loader; 2be911d9 stages the kernel and initramfs in
 # pieces (no large contiguous block, the cause of error 12), reports memory
-# diagnostics, and is pending
-# its console boot test.
-CONFIRMED={1352:'2be911d9cc089e348afc2bc13bef070a2bcbb8ed79073771eed503d32b7745ee'}
+# diagnostics. 83e42de9 adds ATV_INITRD_GAP; booted on a Baikal Pro (11.50).
+CONFIRMED={1352:'83e42de9e14131b9e1e2575f52fadb452c208117f3a51c52ea90fc9e769da2d0'}
 defines=re.findall(r'^#(?:if|elif) defined\s+(PS4_\d+_\d+)|^#ifdef\s+(PS4_\d+_\d+)',
     (root/'loader-source/linux/magic.h').read_text(),re.M)
 defines=[a or b for a,b in defines]
