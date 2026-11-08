@@ -955,6 +955,37 @@ out:
 	return error;
 }
 
+#define MTS_ARL_CFG 0x10
+#define MTS_ARL_MISC_MODE BIT(4) /* promiscuous */
+
+static void mts_set_rx_mode(struct net_device *ndev)
+{
+	struct mts_net *s = &mts;
+	u32 arl;
+
+	if (!s->mac || READ_ONCE(s->terminal_fault))
+		return;
+	arl = readl(s->mac + MTS_ARL_CFG);
+	if (arl == U32_MAX)
+		return;
+	if (ndev->flags & IFF_PROMISC)
+		arl |= MTS_ARL_MISC_MODE;
+	else
+		arl &= ~MTS_ARL_MISC_MODE;
+	writel(arl, s->mac + MTS_ARL_CFG);
+}
+
+static void mts_clear_rx_mode(struct mts_net *s)
+{
+	u32 arl;
+
+	if (!s->mac)
+		return;
+	arl = readl(s->mac + MTS_ARL_CFG);
+	if (arl != U32_MAX && (arl & MTS_ARL_MISC_MODE))
+		writel(arl & ~MTS_ARL_MISC_MODE, s->mac + MTS_ARL_CFG);
+}
+
 static int mts_close(struct net_device *ndev)
 {
 	struct mts_net *s = &mts;
@@ -967,6 +998,7 @@ static int mts_close(struct net_device *ndev)
 	/* Never acquire the core xmit lock while holding tx_lock. */
 	netif_tx_disable(ndev);
 	mts_pause_poll(s);
+	mts_clear_rx_mode(s);
 	if (READ_ONCE(s->terminal_fault) || READ_ONCE(s->error))
 		mts_terminal_stop(s, "ndo-stop-terminal");
 	else if (READ_ONCE(s->engine_live)) {
@@ -1000,6 +1032,7 @@ static const struct net_device_ops mts_ops = {
 	.ndo_open = mts_open, .ndo_stop = mts_close, .ndo_start_xmit = mts_xmit,
 	.ndo_tx_timeout = mts_timeout, .ndo_get_stats64 = mts_stats,
 	.ndo_validate_addr = eth_validate_addr,
+	.ndo_set_rx_mode = mts_set_rx_mode,
 };
 
 static const struct ethtool_ops mts_ethtool_ops = {

@@ -7,14 +7,17 @@
 /* Orbis low RAM ends before the ACPI reservations at 0x7efe8000.
  * Once the stub has gathered the staged pieces, the kernel's protected-mode
  * code sits at ATV_KERNEL_DEST with init_size bytes of workspace and the
- * initramfs follows on the next 2 MiB boundary. Every staging buffer must
+ * initramfs follows ATV_INITRD_GAP after it. Every staging buffer must
  * stay clear of [ATV_KERNEL_DEST, dest_end) so the gather never overwrites
  * a piece it has yet to read. */
 #define ATV_STAGE_FLOOR 0x01000000ULL
+/* 7.0 Baikal kernel fails with the initramfs right after init_size */
+#define ATV_INITRD_GAP 0x10000000ULL
 static int atv_boot_layout(const struct setup_header *h, u64 initrd_bytes,
                            u64 *initrd_dst, u64 *dest_end, u64 *high)
 {
-    *initrd_dst = (ATV_KERNEL_DEST + h->init_size + 0x1fffff) & ~0x1fffffULL;
+    *initrd_dst = ((ATV_KERNEL_DEST + h->init_size + 0x1fffff) & ~0x1fffffULL) +
+                  ATV_INITRD_GAP;
     *dest_end = *initrd_dst + initrd_bytes;
     *high = (u64)h->initrd_addr_max + 1;
     if (*high > 0x7efe8000ULL) *high = 0x7efe8000ULL;
