@@ -81,7 +81,7 @@ Up to build 131, Baikal consoles got a black screen or no signal right after the
 
 ## Firmware versions
 
-Every firmware the Linux loader has kernel offsets for: 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52 and 13.00–13.52. Only 13.52 has been tested. See [Compatibility](COMPATIBILITY.md#firmware).
+Every firmware the Linux loader has kernel offsets for: 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52, 13.00–13.52 and 14.00–14.02. Only 13.52 has been tested. See [Compatibility](COMPATIBILITY.md#firmware).
 
 ## Tested consoles
 
