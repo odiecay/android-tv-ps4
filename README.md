@@ -12,9 +12,15 @@ Questions, testing, or just want to follow along? Join the **[Discord server](ht
 
 [Download](https://github.com/odiecay/android-tv-ps4/releases/tag/v1.1) · [Installation](docs/INSTALL.md) · [Compatibility](docs/COMPATIBILITY.md) · [Hardware support](docs/HARDWARE.md) · [Release notes](docs/RELEASE-NOTES.md) · [Roadmap](docs/ROADMAP.md) · [How it works](docs/DEVELOPMENT.md) · [Build it](docs/BUILD.md) · [Contribute](CONTRIBUTING.md) · [Discord](https://discord.gg/UxC8kx6Eh5)
 
+## Which build do I have?
+
+The public installer is **Android 13 / 1.1 build 132**. Its firmware list ends at 13.52. The later [14.00 and 14.02 source change](https://github.com/odiecay/android-tv-ps4/pull/105) landed after that PKG was published.
+
+**Android 16** is a separate development line. The public v0.1 tag is a source snapshot. Later test packages use a Strawberry kernel intended to cover Aeolia, Belize and Baikal in one image. Boot, HDMI audio, controller navigation and hardware video playback still need results tied to a specific build and console. When reporting a test package, include the filename and internal build number or SHA256.
+
 ## What's new in 1.1
 
-- **Support added for every GoldHEN firmware the Linux loader covers** (tested on 13.52 so far): 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52 and 13.00–13.52 and 14.00–14.02.
+- **Support added for every GoldHEN firmware the Linux loader covers** (tested on 13.52 so far): 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52 and 13.00–13.52.
 - **No console model is blocked.** Belize Slims and Pros reach Android; Baikal is being worked on. See [Hardware support](docs/HARDWARE.md).
 - **Fixes you'll notice:** video no longer freezes, the controller works like a TV remote in every app, a screensaver replaces the sleep mode that froze the console, and it shows up as "PlayStation 4" for Spotify Connect.
 - **One 3.12 GB PKG** from MediaFire, and failed starts explain themselves and save their logs to a USB stick.

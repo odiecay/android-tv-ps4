@@ -27,11 +27,18 @@ body:
     attributes:
       label: Android TV for PS4 version
       options:
-        - "1.1"
-        - "1.0"
+        - "Android 13 / 1.1"
+        - "Android 13 / 1.0"
+        - Android 16 test package
         - Other / own build
     validations:
       required: true
+  - type: input
+    id: package
+    attributes:
+      label: Package filename and build
+      description: Copy the PKG filename. Include its build number or SHA256 if available.
+      placeholder: Android-TV-for-PS4-1.1-b132.pkg
   - type: dropdown
     id: install
     attributes:
@@ -76,7 +83,7 @@ body:
       label: Logs
       description: |
         Drag the files into this box to attach them. A ZIP is fine.
-        - All the logs are in one folder: copy /user/app/ps4-android/logs over GoldHEN FTP and attach it as a ZIP.
-        - Black screen or Linux failed? Plug a FAT32 or exFAT USB stick into the PS4 (before opening the app, or afterwards)
+        - Android 13 logs are in /user/app/ps4-android/logs. Android 16 test builds use /user/app/ps4-android16/logs. Attach the logs from the reported attempt and include its time.
+        - On Android 13, black screen or Linux failed? Plug a FAT32 or exFAT USB stick into the PS4 (before opening the app, or afterwards)
           and attach the AndroidTV-PS4-logs folder from it as a ZIP.
         hardware.txt is the most useful single file.
