@@ -81,7 +81,7 @@ Up to build 131, Baikal consoles got a black screen or no signal right after the
 
 ## Firmware versions
 
-Every firmware the Linux loader has kernel offsets for: 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52, 13.00–13.52 and 14.00–14.02. Only 13.52 has been tested. See [Compatibility](COMPATIBILITY.md#firmware).
+Every firmware the Linux loader has kernel offsets for: 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52, 13.00–13.52. Only 13.52 has been tested. See [Compatibility](COMPATIBILITY.md#firmware).
 
 ## Tested consoles
 
@@ -125,9 +125,9 @@ Maintainers update the page from reports. You can also edit this file yourself: 
 
 A black screen after the handover can mean three different things, and `kernel.log` (saved to `/user/app/ps4-android/logs` and to a USB stick) tells them apart. Compare it with [a known-good fat PS4](reference-logs/fat-aeolia-gpu.txt); the first line that's missing shows where it stopped:
 
-- **No `initializing kernel modesetting` line, or no `kernel.log` at all:** Linux stopped before the GPU driver ran.
+- **No `initializing kernel modesetting` line, or no `kernel.log` at all:** if a current log exists, it contains no evidence that modesetting started. Without a current log, the last Linux stage is unknown.
 - **`LIVERPOOL` or `GLADIUS` appears but there's no `Initialized amdgpu`:** the GPU driver failed. The lines just before say which part (firmware, memory or rings).
-- **`amdgpudrmfb` appears:** the GPU is up and drawing, so the problem is the HDMI output or the TV.
+- **`amdgpudrmfb` appears:** the driver registered a framebuffer. Visible HDMI output still needs to be confirmed.
 
 ## Credits for hardware support
 
