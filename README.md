@@ -14,7 +14,7 @@ Questions, testing, or just want to follow along? Join the **[Discord server](ht
 
 ## What's new in 1.1
 
-- **Support added for every GoldHEN firmware the Linux loader covers** (tested on 13.52 so far): 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52 and 13.00–13.52.
+- **Support added for every GoldHEN firmware the Linux loader covers** (tested on 13.52 so far): 5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52 and 13.00–13.52 and 14.00–14.02.
 - **No console model is blocked.** Belize Slims and Pros reach Android; Baikal is being worked on. See [Hardware support](docs/HARDWARE.md).
 - **Fixes you'll notice:** video no longer freezes, the controller works like a TV remote in every app, a screensaver replaces the sleep mode that froze the console, and it shows up as "PlayStation 4" for Spotify Connect.
 - **One 3.12 GB PKG** from MediaFire, and failed starts explain themselves and save their logs to a USB stick.

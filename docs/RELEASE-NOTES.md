@@ -18,7 +18,7 @@ More consoles and a single download. Thanks to everyone who commented and opened
 
 ### What's new
 
-- **Every firmware the Linux loader supports.** The package now contains a kexec build for each firmware [ps4-linux-loader](https://github.com/ps4-linux/ps4-linux-loader) has kernel offsets for (5.05 to 13.52, [full list](COMPATIBILITY.md#firmware)), and picks the right one at launch. 1.0 only ran on 13.52.
+- **Every firmware the Linux loader supports.** The package now contains a kexec build for each firmware [ps4-linux-loader](https://github.com/ps4-linux/ps4-linux-loader) has kernel offsets for (5.05 to 14.02, [full list](COMPATIBILITY.md#firmware)), and picks the right one at launch. 1.0 only ran on 13.52.
 - **No console model is blocked.** 1.0 stopped on anything but the Aeolia southbridge, both in the launcher and in the Linux start script. 1.1 records the southbridge in the log and carries on. Slim, Pro and Belize/Baikal fat models are untested; reports are very welcome.
 - **Boots without Ethernet hardware.** A console with no Ethernet interface used to stop the Linux start; now it continues without it.
 - **Single-file download.** No more joining parts.

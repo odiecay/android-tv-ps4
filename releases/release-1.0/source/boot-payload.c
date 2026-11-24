@@ -10,11 +10,17 @@
 #include "boot-control.h"
 #include "launch-protocol.h"
 #include "display-release.h"
-#include "build-id.h"
 #define FN(name,type) ((type)((char*)memory+PAYLOAD_##name))
 #define VAR(name,type) (*(type*)((char*)memory+PAYLOAD_##name))
 struct result { unsigned int magic; int stage,rc,cancel_rc; unsigned long long elapsed,nonce; unsigned short firmware,firmware_base; int southbridge; struct atv_boot_report report; };
 _Static_assert(__builtin_offsetof(struct result,report)==sizeof(struct atv_launch_status),"result begins with launch status");
+/* fw_offsets_t layout from ps4-linux-loader's fw_offsets.h. The prebuilt
+ * local payload image predates 14.00/14.02, so the newer entries are kept
+ * here and handed to its kexec stage through the g_fw pointer. */
+struct atv_fw_offsets { unsigned short fw_ver,pad[3]; unsigned long long xfast_syscall,printf_off,kmem_alloc,kernel_map,patch1,patch2,pstate; };
+_Static_assert(sizeof(struct atv_fw_offsets)==64,"fw_offsets ABI");
+static struct atv_fw_offsets atv_fw_1400={1400,{0},0x1c0,0x2E07C0,0x466540,0x22D1D50,0x46660C,0x466614,0x3A2E40};
+static struct atv_fw_offsets atv_fw_1402={1402,{0},0x1c0,0x2E0B20,0x466920,0x22D1D50,0x4669EC,0x4669F4,0x3A31B0};
 static struct result out;
 /* Same notification ABI as OpenOrbis's OrbisNotificationRequest. Kept local
  * because this freestanding runner does not link the native app's SDK libc. */
@@ -73,7 +79,11 @@ int _main(void){
  for(unsigned i=0;i<sizeof(atv_kexec_images)/sizeof(atv_kexec_images[0]);i++)if(atv_kexec_images[i].firmware==norm)loader=&atv_kexec_images[i];
  if(!loader){out.rc=ATV_RC_UNSUPPORTED_FIRMWARE;goto done;}
  copybytes((char*)memory+first,atv_kexec_data+loader->offset,loader->bytes);
- VAR(g_fw,void*)=FN(find_offsets_by_fw,void*(*)(unsigned short))(norm);
+ /* The bundled local payload image only knows the firmware it shipped with.
+  * 14.00/14.02 offsets are newer than that image, so supply them directly. */
+ if(norm==1402)VAR(g_fw,void*)=&atv_fw_1402;
+ else if(norm==1400)VAR(g_fw,void*)=&atv_fw_1400;
+ else VAR(g_fw,void*)=FN(find_offsets_by_fw,void*(*)(unsigned short))(norm);
  VAR(g_kexec_s,char*)=(char*)memory+first;VAR(g_kexec_e,char*)=(char*)memory+first+loader->bytes;
  int sb=out.southbridge;
  if(!VAR(g_fw,void*)){out.rc=ATV_RC_UNSUPPORTED_FIRMWARE;goto done;}
@@ -89,7 +99,7 @@ int _main(void){
  if(fd<0){out.rc=-104;goto done;}ssize_t got=read(fd,args,sizeof(args)-1);close(fd);
  if(got<=0){out.rc=-105;goto done;}
  for(ssize_t i=0;i<got;i++)if(args[i]=='\n'||args[i]=='\r')args[i]=0;
- size_t used=0;while(args[used])used++;const char tag[]=" androidtv.boot_id=" ATV_BUILD_ID;
+ size_t used=0;while(args[used])used++;const char tag[]=" androidtv.boot_id=release-110";
  if(used+sizeof(tag)>sizeof(args)){out.rc=-108;goto done;}copybytes(args+used,tag,sizeof(tag));
  out.stage=3;save();VAR(errno,int)=0;
  FN(kexec,void(*)(void*,void*))((char*)memory+PAYLOAD_kernel_main,0);
@@ -97,10 +107,7 @@ int _main(void){
  out.stage=4;save();unsigned long long start=sceKernelGetProcessTime();
  int packed=FN(pack_kexec_args,int(*)(int,unsigned short,int))(2048,fwver,sb);
  out.rc=FN(kexec_load,int(*)(void*,unsigned long long,void*,unsigned long long,void*,int))(kernel,kernel_bytes,initrd,ATV_INITRD_BYTES,args,packed);
- out.elapsed=sceKernelGetProcessTime()-start;
- /* The loader fills its memory diagnostics even when preparation fails. */
- if(out.rc)(void)FN(kexec_load,int(*)(void*,unsigned long long,void*,unsigned long long,void*,int))(0,ATV_BOOT_QUERY,&out.report,sizeof(out.report),0,0);
- out.stage=5;save();
+ out.elapsed=sceKernelGetProcessTime()-start;out.stage=5;save();
  if(out.rc)goto done;
  out.rc=FN(kexec_load,int(*)(void*,unsigned long long,void*,unsigned long long,void*,int))(0,ATV_BOOT_QUERY,&out.report,sizeof(out.report),0,0);
  out.stage=6;save();

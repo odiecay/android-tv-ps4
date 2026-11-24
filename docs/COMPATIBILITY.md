@@ -14,9 +14,9 @@
 
 ## Firmware
 
-The boot payload reads the console's firmware and picks the matching build of the [ps4-linux-loader](https://github.com/ps4-linux/ps4-linux-loader) kexec (v25.1). The package contains one for each firmware the loader has kernel offsets for:
+The boot payload reads the console's firmware and picks the matching build of the [ps4-linux-loader](https://github.com/ps4-linux/ps4-linux-loader) kexec (v25.1, with 14.00/14.02 offsets added). The package contains one for each firmware the loader has kernel offsets for:
 
-**5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52 and 13.00–13.52**
+**5.05, 6.72, 7.00–7.55, 8.00–8.52, 9.00–9.60, 10.00–10.71, 11.00, 11.02, 11.50–11.52, 12.00–12.52, 13.00–13.52 and 14.00–14.02**
 
 Point releases that share kernel offsets use the same build (for example 9.51 uses the 9.60 one). On a firmware with no offsets, the launcher shows "Firmware X isn't supported yet" and stops before anything is loaded. Only 13.52 has been tested on a real console so far.
 

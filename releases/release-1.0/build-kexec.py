@@ -7,16 +7,12 @@ import subprocess, sys, hashlib, json, re
 root=Path(__file__).resolve().parent
 out=Path(sys.argv[1]).resolve();out.mkdir(parents=True,exist_ok=True)
 source=root/'loader-source/linux/ps4-kexec-common'
-# The 13.52 blob is pinned so loader changes are deliberate. 86ab8e60 was the
-# console-confirmed 1.1 loader; 2be911d9 stages the kernel and initramfs in
-# pieces (no large contiguous block, the cause of error 12), reports memory
-# diagnostics, and is pending
-# its console boot test.
-CONFIRMED={1352:'2be911d9cc089e348afc2bc13bef070a2bcbb8ed79073771eed503d32b7745ee'}
+# The 13.52 blob is the one confirmed on a console; it must stay byte-identical.
+CONFIRMED={1352:'86ab8e60e8633975f928931527beb571c4f1f421b8700141b0a50d2f566ffa38'}
 defines=re.findall(r'^#(?:if|elif) defined\s+(PS4_\d+_\d+)|^#ifdef\s+(PS4_\d+_\d+)',
     (root/'loader-source/linux/magic.h').read_text(),re.M)
 defines=[a or b for a,b in defines]
-assert len(defines)==len(set(defines))==20,defines
+assert len(defines)==len(set(defines))==22,defines
 def build(define,directory):
     subprocess.run(['make','-s','-C',str(source),'FW_DEFINE='+define,'BUILD_DIR='+str(directory),'clean'],check=True)
     subprocess.run(['make','-s','-C',str(source),'FW_DEFINE='+define,'BUILD_DIR='+str(directory),
